@@ -1,0 +1,163 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrahead %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const header = document.getElementById("header");
+        if (header) {
+            header.innerHTML = `
+                <div id="branding">
+                    <div id="site-name"><a href="/admin/">eCommerce - System</a></div>
+                </div>
+            `;
+        }
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background-color: white;
+    }
+
+    h2 {
+        color: black;
+    }
+</style>
+
+<div class="container">
+    <div class="month-selection">
+        <form id="monthForm">
+            <div>
+                <label for="month">Thống Kê theo tháng:</label>
+                <select id="month" name="month">
+                    <option value="Chọn tháng"></option>
+                    <option value="1">Tháng 1</option>
+                    <option value="2">Tháng 2</option>
+                    <option value="3">Tháng 3</option>
+                    <option value="4">Tháng 4</option>
+                    <option value="5">Tháng 5</option>
+                    <option value="6">Tháng 6</option>
+                    <option value="7">Tháng 7</option>
+                    <option value="8">Tháng 8</option>
+                    <option value="9">Tháng 9</option>
+                    <option value="10">Tháng 10</option>
+                    <option value="11">Tháng 11</option>
+                    <option value="12">Tháng 12</option>
+                </select>
+            </div>
+            <button>Xem thống kê</button>
+        </form>
+    </div>
+<h2>THỐNG KÊ ĐƠN HÀNG</h2>
+<!--<table>-->
+<!--    <thead>-->
+<!--        <tr>-->
+<!--            <th>Tên cửa hàng</th>-->
+<!--            <th>Số lượng đơn hàng</th>-->
+<!--        </tr>-->
+<!--    </thead>-->
+<!--    <tbody>-->
+<!--    {% for r in order_in_quarter %}-->
+<!--        <tr>-->
+<!--            <td>{{ r.name_store }}</td>-->
+<!--            <td>{{ r.order_counts }}</td>-->
+<!--        </tr>-->
+<!--    {% endfor %}-->
+<!--    </tbody>-->
+<!--</table>-->
+
+<div>
+    <canvas id="myChart"></canvas>
+</div>
+
+<!--<script>-->
+<!--    window.onload = () => {-->
+<!--        const storeNames = [];-->
+<!--        const orderCounts = [];-->
+
+<!--        {% for r in order_in_quarter %}-->
+<!--            storeNames.push("{{ r.name_store }}");-->
+<!--            orderCounts.push("{{ r.order_counts }}");-->
+<!--        {% endfor %}-->
+
+<!--        const ctx = document.getElementById('myChart').getContext('2d');-->
+
+<!--        new Chart(ctx, {-->
+<!--            type: 'bar',-->
+<!--            data: {-->
+<!--                labels: storeNames,-->
+<!--                datasets: [{-->
+<!--                    label: 'Số lượng đơn hàng theo quý',-->
+<!--                    data: orderCounts,-->
+<!--                    backgroundColor: 'rgba(54, 162, 235, 0.2)',-->
+<!--                    borderColor: 'rgb(54, 162, 235)',-->
+<!--                    borderWidth: 1-->
+<!--                }]-->
+<!--            },-->
+<!--            options: {-->
+<!--                scales: {-->
+<!--                    y: {-->
+<!--                        beginAtZero: true-->
+<!--                    }-->
+<!--                }-->
+<!--            }-->
+<!--        });-->
+<!--    };-->
+<!--</script>-->
+
+
+
+<table>
+    <thead>
+        <tr>
+            <th>Tên cửa hàng</th>
+            <th>Số lượng đơn hàng</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for r in order_in_month %}
+        <tr>
+            <td>{{ r.name_store }}</td>
+            <td>{{ r.order_counts }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+<script>
+    window.onload = () => {
+        const storeNames = [];
+        const orderCounts = [];
+
+        {% for r in order_in_month %}
+            storeNames.push("{{ r.name_store }}");
+            orderCounts.push("{{ r.order_counts }}");
+        {% endfor %}
+
+        const ctx = document.getElementById('myChart').getContext('2d');
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: storeNames,
+                datasets: [{
+                    label: 'Số lượng đơn hàng theo tháng',
+                    data: orderCounts,
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgb(54, 162, 235)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    };
+</script>
+{% endblock %}
