@@ -20,6 +20,8 @@ router.register('stores', views.StoreViewSet)
 router.register('shippingTypes', views.ShippingView)
 router.register('paymentTypes', views.PaymentView)
 router.register('comments', views.CommentView)
+router.register('show_accounts', views.ShowAccountViewSet, basename='show_accounts')
+router.register('orderdetails', views.OrderDetailViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

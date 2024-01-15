@@ -12,27 +12,13 @@ class RoleSerializer(ModelSerializer):
 
 
 class AccountSerializer(ModelSerializer):
-    role_name = RoleSerializer(source='role', read_only=True)
-
-    # role = serializers.PrimaryKeyRelatedField(queryset=UserRole.objects.all(), write_only=True)
-    # avt_info = serializers.SerializerMethodField(source='avt')
-    # avt = serializers.ImageField(write_only=True, required=False)
-
     class Meta:
         model = Account
         fields = ['id', 'full_name', 'date_of_birth', 'gender', 'address', 'email', 'phone', 'username', 'password',
-                  'avt', 'role_name']
+                  'avt', 'role']
         extra_kwargs = {
             'password': {'write_only': 'true'}
         }
-
-    def get_avt(self, avt):
-        url = 'https://res.cloudinary.com/ddcsszxcb/'
-        if avt.avt and url not in urljoin(url, avt.avt.url):
-            return avt.avt.url
-        return None
-
-    avt = serializers.SerializerMethodField(method_name='get_avt')
 
     def create(self, validated_data):
         data = validated_data.copy()
@@ -41,6 +27,22 @@ class AccountSerializer(ModelSerializer):
         account.save()
         # breakpoint()
         return account
+
+
+class AccountShowAvt(ModelSerializer):
+    class Meta:
+        model = Account
+        fields = ['id', 'full_name', 'date_of_birth', 'gender', 'address', 'email', 'phone', 'username', 'password',
+                  'avt', 'role']
+        extra_kwargs = {
+            'password': {'write_only': 'true'}
+        }
+    def get_avt(self, avt):
+        url = 'https://res.cloudinary.com/ddcsszxcb/'
+        if avt.avt and url not in urljoin(url, avt.avt.url):
+            return avt.avt.url
+        return None
+    avt = serializers.SerializerMethodField(method_name='get_avt')
 
 
 class StoreSerializer(ModelSerializer):
@@ -63,17 +65,6 @@ class AttributeSerializer(ModelSerializer):
         # fields = ["id", "name_at", "data_type"]
 
 
-class ProductSerializer(ModelSerializer):
-    product_attributes = AttributeSerializer(many=True, read_only=True, source='attribute')
-    # store_info = StoreSerializer(source='store', read_only=True)
-    category_info = CategoryListSerializer(source='category', read_only=True)
-
-    class Meta:
-        model = Product
-        fields = ["id", "name_product", "price", "description", "status", "quantity", "store", "category_info",
-                  'product_attributes']
-
-
 class ImageSerializer(ModelSerializer):
     # product_info = ProductSerializer(source='product', read_only=True)
     # thumbnails = serializers.SerializerMethodField(source='thumbnail')
@@ -88,6 +79,18 @@ class ImageSerializer(ModelSerializer):
             return image.thumbnail.url
 
     thumbnail = serializers.SerializerMethodField(method_name='get_thumbnail')
+
+
+class ProductSerializer(ModelSerializer):
+    product_attributes = AttributeSerializer(many=True, read_only=True, source='attribute')
+    # store_info = StoreSerializer(source='store', read_only=True)
+    category_info = CategoryListSerializer(source='category', read_only=True)
+    image_info = ImageSerializer(source='image', read_only=True, many=True)
+
+    class Meta:
+        model = Product
+        fields = ["id", "name_product", "price", "description", "status", "quantity", "store", "category_info",
+                  'product_attributes', 'image_info']
 
 
 class CategorySerializer(ModelSerializer):

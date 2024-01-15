@@ -81,7 +81,7 @@ class Attribute(models.Model):
 
 class Image(models.Model):
     thumbnail = CloudinaryField('image', null=True)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, null=True)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, null=True, related_name='image')
 
     def __str__(self):
         return self.product.name_product
@@ -156,11 +156,11 @@ class OrderDetail(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.product.name_product + " - " + self.quantity
+        return self.product.name_product + " - " + str(self.quantity)
 
 
 class CommentProduct(BaseModel):
-    rating = models.IntegerField()
+    rating = models.IntegerField(null=True)
     content = models.TextField()
     reply_idComment = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies')
     account = models.ForeignKey(Account, on_delete=models.CASCADE, null=True)

@@ -3,6 +3,7 @@ from ast import Str
 from calendar import calendar
 from collections import deque
 from itertools import product, accumulate
+from urllib.parse import urljoin
 
 from _testmultiphase import Str
 from ckeditor_uploader.views import upload
@@ -21,7 +22,7 @@ from . import serializers, dao
 from .models import Product, Category, Account, Image, UserRole, Order, Store, Attribute, PaymentType, ShippingType, \
     OrderDetail, CommentProduct, ReviewStore
 from .serializers import RoleSerializer, ProductSerializer, CategorySerializer, AccountSerializer, ImageSerializer, \
-    CommentProductSerializer, ReviewStoreSerialzer, StoreSerializer, AttributeSerializer
+    CommentProductSerializer, ReviewStoreSerialzer, StoreSerializer, AttributeSerializer, AccountShowAvt
 from eCommerce import perms
 
 
@@ -30,12 +31,13 @@ from eCommerce import perms
 #         return request.account and request.account.is_staff
 
 
-class AccountViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView):
+class AccountViewSet(viewsets.ViewSet, generics.CreateAPIView):
     # RetrieveAPIView lay thong in user dang login
     queryset = Account.objects.filter(is_active=True)
     serializer_class = serializers.AccountSerializer  # serializer du lieu ra thanh json
     parser_classes = [parsers.MultiPartParser]
-    permission_classes = [permissions.IsAuthenticated]
+
+    # permission_classes = [permissions.IsAuthenticated]
 
     # permission_classes = [IsAdmin]
     @swagger_auto_schema(
@@ -62,6 +64,15 @@ class AccountViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIV
     @action(methods=['get'], url_name='current_account', detail=False)
     def current_account(self, request):
         return Response(serializers.AccountSerializer(request.user).data)
+
+    # @action(methods=['POST'], detail=False)
+    # def create_account(self, request):
+    #     # id_role = request.data.get('id_role')
+    #     serializer = serializers.AccountSerializer(data=request.data)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['Delete'], url_name='delete', detail=True)
     def delete_account(self, request, pk=None):
@@ -94,7 +105,19 @@ class AccountViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIV
             serializer = self.serializer_class(account)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Account.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+class ShowAccountViewSet(viewsets.ViewSet):
+    queryset = Account.objects.all()
+    serializer_class = serializers.AccountShowAvt
+    parser_classes = [parsers.MultiPartParser]
+
+    @action(methods=['GET'], detail=False)
+    def get_account(self, request):
+        query = self.queryset
+        account = self.serializer_class(query, many=True)
+        return Response(account.data)
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -123,6 +146,77 @@ class ProductViewSet(viewsets.ViewSet, generics.ListAPIView):
     #         return Response(status=status.HTTP_404_NOT_FOUND)
     #     images = product.images.all()
     #     return Response(serializers.)
+    @action(methods=['PATCH'], detail=True)
+    def update_product(self, request, pk):
+        product = self.get_object()
+        check = False
+        p = Product.objects.get(pk=product.id)
+        image_id = request.data.getlist('image_id')
+        new_image = request.FILES.getlist('thumbnail')
+        quantity = int(request.data.get('quantity'))
+        description = request.data.get('description')
+        name_product = request.data.get('name_product')
+        price = float(request.data.get('price'))
+        category_id = int(request.data.get('category_id'))
+        names = request.data.getlist('name_at')
+        values = request.data.getlist('value')
+        att = request.data.getlist('attribute_id')
+        if quantity:
+            tam_quantity = p.quantity
+            p.quantity = quantity
+            p.save()
+            check = True
+        if description:
+            tam_description = p.description
+            p.description = description
+            p.save()
+            check = True
+        if name_product:
+            tam_name_product = p.name_product
+            p.name_product = name_product
+            p.save()
+            check = True
+        if price:
+            tam_price = p.price
+            p.price = price
+            p.save()
+            check = True
+        if category_id:
+            cate = Category.objects.get(pk=category_id)
+            tam_category_id = p.category_id
+            p.category_id = cate
+            p.save()
+            check = True
+        if image_id:
+            for i, img in zip(image_id, new_image):
+                image = Image.objects.get(id=i)
+                tam_img = image.thumbnail
+                image.thumbnail = img
+                image.save()
+                check = True
+
+        if att:
+            for a, name, value in zip(att, names, values):
+                attribute = Attribute.objects.get(id=a)
+                tam_name = attribute.name_at
+                tam_value = attribute.value
+                attribute.name_at = name
+                attribute.value = value
+                attribute.save()
+                check = True
+        if check.__eq__(True):
+            return Response('Cập nhật thành công', status=status.HTTP_200_OK)
+        else:
+            return Response('Cập nhật không thành công', status=status.HTTP_400_BAD_REQUEST)
+
+    def retrieve(self, request, pk=None):
+        try:
+            product = self.queryset.get(pk=pk)
+            serializer = self.serializer_class(product)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Product.DoesNotExist:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
     @action(methods=['GET'], detail=False)
     def get_list_product_in_cart(self, request):
         products = request.data.getlist('product')
@@ -151,13 +245,39 @@ class ProductViewSet(viewsets.ViewSet, generics.ListAPIView):
     @action(methods=['post'], detail=True)
     def add_attribute(self, request, pk):
         product = self.get_object()
-        names = request.data.getlist('name_at')
-        values = request.data.getlist('value')
+        names = request.data.getlist('name_at[]')
+        values = request.data.getlist('value[]')
         attributes = []
         for name_att, value_att in zip(names, values):
             attribute, created = Attribute.objects.get_or_create(name_at=name_att, value=value_att, product=product)
             attributes.append(attribute)
         return Response(serializers.AttributeSerializer(attributes, many=True, context={'request': request}).data)
+
+    @action(methods=['post'], detail=True)
+    def add_image_in_product(self, request, pk):
+        user = request.user
+        imgs = request.FILES.getlist('thumbnail')
+        product_id = self.get_object()
+
+        if not imgs:
+            return Response("Image is required.", status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return Response("Product does not exist.", status=status.HTTP_400_BAD_REQUEST)
+
+        check = False
+        # self.serializer_class().push_images_for_house(house_id, new_image)
+        for img in imgs:
+            image = Image.objects.create(thumbnail=img, product=product)
+            image.save()
+            check = True
+
+        if check == True:
+            return Response("Thanh cong roi nhe", status=status.HTTP_200_OK)
+        else:
+            return Response('loi roi do hoang', status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['GET'], detail=False)
     def get_product_by_category(self, request):
@@ -212,21 +332,16 @@ class ProductViewSet(viewsets.ViewSet, generics.ListAPIView):
         return Response({'product_1': pro_1, 'product_2': pro_2}, status=status.HTTP_200_OK)
 
     @action(methods=['GET'], detail=False)
-    def get_queryset(self):
+    def get_query(self, request):
         query = self.queryset
-
-        name = self.request.query_params.get("name")
-        if name:
-            query = query.filter(name_product__icontains=name)
-
+        name_product = self.request.query_params.get("name_product")
+        if name_product:
+            query = query.filter(name_product__icontains=name_product)
         name_store = self.request.query_params.get("name_store")
         if name_store:
             query = query.filter(store__name_store__icontains=name_store)
-
-        price = self.request.query_params.get("price")
-        if price:
-            query = query.filter(price__icontains=price)
-        return query
+        serializer = ProductSerializer(query, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(methods=['GET'], detail=False)
     def sort_by_name(self, request):
@@ -252,32 +367,6 @@ class ImageViewSet(viewsets.ModelViewSet):
     serializer_class = ImageSerializer
     parser_classes = [parsers.MultiPartParser]
 
-    @action(methods=['post'], detail=False)
-    def add_image_in_product(self, request):
-        user = request.user
-        imgs = request.FILES.getlist('thumbnail')
-        product_id = int(request.data.get('product'))
-
-        if not imgs:
-            return Response("Image is required.", status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            product = Product.objects.get(id=product_id)
-        except Product.DoesNotExist:
-            return Response("Product does not exist.", status=status.HTTP_400_BAD_REQUEST)
-
-        check = False
-        # self.serializer_class().push_images_for_house(house_id, new_image)
-        for img in imgs:
-            image = Image.objects.create(thumbnail=img, product=product)
-            image.save()
-            check = True
-
-        if check == True:
-            return Response("Thanh cong roi nhe", status=status.HTTP_200_OK)
-        else:
-            return Response('loi roi do hoang', status=status.HTTP_400_BAD_REQUEST)
-
 
 class RoleViewSet(viewsets.ViewSet,
                   generics.ListAPIView):
@@ -302,33 +391,34 @@ class OrderViewSet(viewsets.ViewSet):
         account = int(request.data.get('account'))
         paymentType_id = int(request.data.get('paymentType'))
         shippingType_id = int(request.data.get('shippingType'))
-        if request.user.is_authenticated and request.user.role_id == 2:
+        # if request.user.is_authenticated and request.user.role_id == 2:
 
-            if not shipping_address or not shipping_fee or not note or not paymentType_id or not shippingType_id:
-                return Response({'error': 'Thông tin  không đủ'}, status=status.HTTP_400_BAD_REQUEST)
-            try:
-                account = Account.objects.get(id=account)
-            except Account.DoesNotExist:
-                return Response("Không tìm thấy tài khoản.", status=status.HTTP_400_BAD_REQUEST)
+        if not shipping_address or not shipping_fee or not note or not paymentType_id or not shippingType_id:
+            return Response({'error': 'Thông tin  không đủ'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            account = Account.objects.get(id=account)
+        except Account.DoesNotExist:
+            return Response("Không tìm thấy tài khoản.", status=status.HTTP_400_BAD_REQUEST)
 
-            try:
-                payment_type = PaymentType.objects.get(id=paymentType_id)
-            except PaymentType.DoesNotExist:
-                return Response("Không tìm thấy loại thanh toán.", status=status.HTTP_400_BAD_REQUEST)
+        try:
+            payment_type = PaymentType.objects.get(id=paymentType_id)
+        except PaymentType.DoesNotExist:
+            return Response("Không tìm thấy loại thanh toán.", status=status.HTTP_400_BAD_REQUEST)
 
-            try:
-                shipping_type = ShippingType.objects.get(id=shippingType_id)
-            except ShippingType.DoesNotExist:
-                return Response("Không tìm thấy loại vận chuyển.", status=status.HTTP_400_BAD_REQUEST)
+        try:
+            shipping_type = ShippingType.objects.get(id=shippingType_id)
+        except ShippingType.DoesNotExist:
+            return Response("Không tìm thấy loại vận chuyển.", status=status.HTTP_400_BAD_REQUEST)
 
-            order = Order.objects.create(shipping_address=shipping_address, shipping_fee=shipping_fee, note=note,
-                                         status_pay=0, status_review=0,
-                                         status_order=0, account=account, paymentType=payment_type,
-                                         shippingType=shipping_type)
-            order.save()
-            return Response(serializers.OrderSerializer(order).data, status=status.HTTP_200_OK)
-        else:
-            return Response('Bạn Không có quyền mua hàng')
+        order = Order.objects.create(shipping_address=shipping_address, shipping_fee=shipping_fee, note=note,
+                                     status_pay=0, status_review=0,
+                                     status_order=0, account=account, paymentType=payment_type,
+                                     shippingType=shipping_type)
+        order.save()
+        return Response(serializers.OrderSerializer(order).data, status=status.HTTP_200_OK)
+
+    # else:
+    #     return Response('Bạn Không có quyền mua hàng')
 
     @action(methods=['Post'], detail=True)
     def create_orderdetail(self, request, pk):
@@ -387,80 +477,47 @@ class OrderViewSet(viewsets.ViewSet):
         return Response(data, status=status.HTTP_200_OK)
 
 
-class StoreViewSet(viewsets.ViewSet, generics.ListAPIView):
+class StoreViewSet(viewsets.ViewSet, generics.ListAPIView, generics.DestroyAPIView):
     queryset = Store.objects.all()
     serializer_class = serializers.StoreSerializer
 
     # permission_classes = [permissions.IsAuthenticated]
 
-    @swagger_auto_schema(
-        operation_description="Get the current user",
-        manual_parameters=[
-            openapi.Parameter(
-                name="Authorization",
-                in_=openapi.IN_HEADER,
-                type=openapi.TYPE_STRING,
-                description="Bearer token",
-                required=False,
-                default="Bearer your_token_here"
-            )
-        ],
-        responses={
-            200: openapi.Response(
-                description="SMS sent with password reset instructions",
-            ),
-            400: openapi.Response(
-                description="User with this phone number does not exist",
-            ),
-        }
-    )
     @action(methods=['POST'], detail=False)
     def create_store(self, request):
         user = request.user
-        if user.role_id != 2:
-            return Response({'error': 'Khong co quyen tao cua hang'}, status=status.HTTP_403_FORBIDDEN)
-
-        existing_store = Store.objects.filter(account=user)
-
-        if existing_store.exists():
-            return Response({'error': 'You already have a store.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        store_data = request.data.copy()
-        store_data['account'] = user.id
-        serializer = serializers.StoreSerializer(data=store_data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        store_name = request.data.get('name_store')
+        address = request.data.get('address')
+        if user.role_id != 3:
+            account = Account.objects.get(pk=user.id)
+            role = UserRole.objects.get(pk=3)
+            store = Store.objects.create(name_store=store_name, address=address, active=1, account=account)
+            account.role_id = role
+            account.save()
+            store.save()
+            return Response(serializers.StoreSerializer(store).data, status=status.HTTP_200_OK)
+        else:
+            account = Account.objects.get(pk=user.id)
+            store = Store.objects.create(name_store=store_name, address=address, active=1, account=account)
+            store.save()
+            return Response(serializers.StoreSerializer(store).data, status=status.HTTP_200_OK)
 
     @action(methods=['POST'], detail=True)
     def add_product(self, request, pk):
-        user = request.user
+        # user = request.user
         store = self.get_object()
-        category_id = int(request.data.get('category'))
+        category_id = int(request.data.get('category_id'))
         quantity = int(request.data.get('quantity'))
         description = request.data.get('description')
         name_product = request.data.get('name_product')
         price = float(request.data.get('price'))
-
-        if user.is_authenticated and user.role_id == 2:
-            if not quantity or not name_product or not description or not price:
-                return Response({'error': 'Thông tin sản phẩm không đủ'}, status=status.HTTP_400_BAD_REQUEST)
-
-            if not store:
-                return Response({'error': 'Bạn không có cửa hàng để thêm sản phẩm'}, status=status.HTTP_404_NOT_FOUND)
-
-            category = Category.objects.get(pk=category_id)
-            if not category:
-                return Response({'error': 'Bạn không có lọai mặt hàng'}, status=status.HTTP_404_NOT_FOUND)
-
-            product = Product.objects.create(name_product=name_product, store=store, category=category,
-                                             quantity=quantity, description=description, price=price)
-            product.save()
-            return Response(serializers.ProductSerializer(product).data, status=status.HTTP_201_CREATED)
-
-        return Response({'error': 'Bạn không có quyền thêm sản phẩm.'}, status=status.HTTP_403_FORBIDDEN)
+        if not quantity or not name_product or not description or not price:
+            return Response({'error': 'Thông tin sản phẩm không đủ'}, status=status.HTTP_400_BAD_REQUEST)
+        category = Category.objects.get(pk=category_id)
+        product = Product.objects.create(name_product=name_product, store=store, category=category,
+                                         quantity=quantity, description=description, price=price)
+        product.save()
+        return Response(serializers.ProductSerializer(product).data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['Get'], url_path='get_order_count_in_month')
     def get_order_count_month(self, request, *args, **kwargs):
@@ -572,6 +629,7 @@ class StoreViewSet(viewsets.ViewSet, generics.ListAPIView):
                 'category_revenues': c['total_revenue']
             })
         return Response(data, status=status.HTTP_200_OK)
+
     # @action(methods=['GET'], detail=True)
     # def product_revenue_12month_of_year(self, request, pk):
     #     data =[]
@@ -591,6 +649,31 @@ class StoreViewSet(viewsets.ViewSet, generics.ListAPIView):
     #     return Response(data, status=status.HTTP_200_OK)
 
 
+class OrderDetailViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = OrderDetail.objects.all()
+    serializer_class = serializers.OderDetailSerializer
+
+    @action(methods=['POST'], detail=True)
+    def add_comment_product(self, request, pk):
+        account_id = request.query_params.get('account_id')
+        orderdetail_id = OrderDetail.objects.get(id=pk)
+        rating_pro = int(request.data.get('rating'))
+        content_pro = request.data.get('content')
+        # breakpoint()
+        try:
+            account = Account.objects.get(id=account_id)
+        except Account.DoesNotExist:
+            return Response("Không tìm thấy tài khoản.", status=status.HTTP_400_BAD_REQUEST)
+
+        if not content_pro or not rating_pro:
+            return Response('Dữ liệu thiếu', status=status.HTTP_400_BAD_REQUEST)
+
+        comment = CommentProduct.objects.create(rating=rating_pro, content=content_pro, account=account,
+                                                orderDetail=orderdetail_id)
+        comment.save()
+        return Response(serializers.CommentProductSerializer(comment).data, status=status.HTTP_200_OK)
+
+
 class ShippingView(viewsets.ViewSet, generics.ListAPIView,
                    generics.CreateAPIView, generics.UpdateAPIView,
                    generics.DestroyAPIView):
@@ -605,36 +688,41 @@ class PaymentView(viewsets.ViewSet, generics.ListAPIView,
     serializer_class = serializers.PaymentTypeSerializer
 
 
-class CommentView(viewsets.ViewSet, generics.ListAPIView):
+class CommentView(viewsets.ViewSet, generics.ListAPIView, generics.UpdateAPIView):
     queryset = CommentProduct.objects.all()
     serializer_class = serializers.CommentProductSerializer
 
     # permission_classes = [permissions.IsAuthenticated]
 
-    @action(methods=['POST'], detail=False)
-    def add_comment_product(self, request):
-        account_id = request.query_params.get('account_id')
-        orderdetail_id = request.query_params.get('orderdetail')
+    def get_permissions(self):
+        if self.action in ['update', 'partial_update']:
+            return [perms.OwnerAuth()]
+        return [permissions.AllowAny()]
+
+    @action(methods=['POST'], detail=True)
+    def reply_comment(self, request, pk):
+        account_id = request.data.get('account_id')
         rating_pro = int(request.data.get('rating'))
         content_pro = request.data.get('content')
-        # breakpoint()
+        reply_id = CommentProduct.objects.get(id=pk)
+        orderdetail = int(request.data.get('orderdetail_id'))
         try:
             account = Account.objects.get(id=account_id)
         except Account.DoesNotExist:
             return Response("Không tìm thấy tài khoản.", status=status.HTTP_400_BAD_REQUEST)
-        try:
-            orderdetail = OrderDetail.objects.get(id=orderdetail_id)
-        except OrderDetail.DoesNotExist:
-            return Response('Không tìm thấy Orderdetail', status=status.HTTP_400_BAD_REQUEST)
 
-        if not content_pro or not rating_pro:
+        try:
+            orderdetail_id = OrderDetail.objects.get(id=orderdetail)
+        except:
+            return Response('Không tìm thấy orderdetail', status=status.HTTP_400_BAD_REQUEST)
+
+        if not rating_pro or not content_pro:
             return Response('Dữ liệu thiếu', status=status.HTTP_400_BAD_REQUEST)
 
-        comment = CommentProduct.objects.create(rating=rating_pro, content=content_pro, account=account, orderDetail=orderdetail)
+        comment = CommentProduct.objects.create(rating=rating_pro, content=content_pro, account=account,
+                                                orderDetail=orderdetail_id, reply_idComment=reply_id)
         comment.save()
         return Response(serializers.CommentProductSerializer(comment).data, status=status.HTTP_200_OK)
-
-
 
 
 class ReviewStoreView(viewsets.ViewSet, generics.ListAPIView):
