@@ -8,7 +8,6 @@ from . import views
 from .admin import adminSite
 
 
-
 router = DefaultRouter()
 router.register('accounts', views.AccountViewSet)
 router.register('categories', views.CategoryViewSet)
@@ -20,9 +19,9 @@ router.register('stores', views.StoreViewSet)
 router.register('shippingTypes', views.ShippingView)
 router.register('paymentTypes', views.PaymentView)
 router.register('comments', views.CommentView)
-router.register('show_accounts', views.ShowAccountViewSet, basename='show_accounts')
 router.register('orderdetails', views.OrderDetailViewSet)
-
+router.register('follow', views.FollowViewSet)
+router.register('attribute', views.AttributeViewSet)
 urlpatterns = [
     path('', include(router.urls)),
     path('admin/', adminSite.urls),

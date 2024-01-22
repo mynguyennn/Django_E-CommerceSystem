@@ -35,7 +35,8 @@ class Store(BaseModel):
     name_store = models.CharField(max_length=255, null=False)
     address = models.CharField(max_length=500, null=False)
     active = models.BooleanField(default=False)
-    account = models.ForeignKey(Account, on_delete=models.CASCADE, null= True)
+    account = models.ForeignKey(Account, on_delete=models.CASCADE, null=True)
+    avt = CloudinaryField('avt', null=True)
 
     def __str__(self):
         return self.name_store
@@ -169,3 +170,10 @@ class CommentProduct(BaseModel):
     def __str__(self):
         return f"{self.account.full_name} đã bình luận sản phẩm {self.orderDetail.product.name_product}"
 
+
+class Follow(BaseModel):
+    follower = models.ForeignKey(Account, on_delete=models.CASCADE, null=True)
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, null=True)
+
+    def __str__(self):
+        return f"Follower: {self.follower}"

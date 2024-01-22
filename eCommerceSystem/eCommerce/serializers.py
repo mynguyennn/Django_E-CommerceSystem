@@ -2,7 +2,8 @@ from django.contrib.auth.hashers import make_password
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 from urllib.parse import urljoin
-from .models import Image, Product, Category, Attribute, Store, Account, UserRole, Order, PaymentType, ShippingType, OrderDetail, CommentProduct, ReviewStore
+from .models import (Image, Product, Category, Attribute, Store, Account, UserRole, Order, PaymentType, ShippingType,
+                     OrderDetail, CommentProduct, ReviewStore, Follow)
 
 
 class RoleSerializer(ModelSerializer):
@@ -12,6 +13,7 @@ class RoleSerializer(ModelSerializer):
 
 
 class AccountSerializer(ModelSerializer):
+
     class Meta:
         model = Account
         fields = ['id', 'full_name', 'date_of_birth', 'gender', 'address', 'email', 'phone', 'username', 'password',
@@ -19,6 +21,13 @@ class AccountSerializer(ModelSerializer):
         extra_kwargs = {
             'password': {'write_only': 'true'}
         }
+
+    def get_avt(self, avt):
+        url = 'https://res.cloudinary.com/ddcsszxcb/'
+        if avt.avt and url not in urljoin(url, avt.avt.url):
+            return avt.avt.url
+        return None
+    avt = serializers.SerializerMethodField(method_name='get_avt')
 
     def create(self, validated_data):
         data = validated_data.copy()
@@ -29,27 +38,25 @@ class AccountSerializer(ModelSerializer):
         return account
 
 
-class AccountShowAvt(ModelSerializer):
+class FollowSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Account
-        fields = ['id', 'full_name', 'date_of_birth', 'gender', 'address', 'email', 'phone', 'username', 'password',
-                  'avt', 'role']
-        extra_kwargs = {
-            'password': {'write_only': 'true'}
-        }
+        model = Follow
+        fields = ['id', 'follower', 'store']
+
+
+class StoreSerializer(ModelSerializer):
+    followers = FollowSerializer(read_only=True, many=True, source='follow_set')
+
+    class Meta:
+        model = Store
+        fields = ["id", "name_store", "address", "active", 'avt', 'followers']
+
     def get_avt(self, avt):
         url = 'https://res.cloudinary.com/ddcsszxcb/'
         if avt.avt and url not in urljoin(url, avt.avt.url):
             return avt.avt.url
         return None
     avt = serializers.SerializerMethodField(method_name='get_avt')
-
-
-class StoreSerializer(ModelSerializer):
-    class Meta:
-        model = Store
-        fields = '__all__'
-        # fields = ["id", "name_store", "address", "active"]
 
 
 class CategoryListSerializer(ModelSerializer):
@@ -61,8 +68,7 @@ class CategoryListSerializer(ModelSerializer):
 class AttributeSerializer(ModelSerializer):
     class Meta:
         model = Attribute
-        fields = ["name_at", 'value']
-        # fields = ["id", "name_at", "data_type"]
+        fields = ['id', "name_at", 'value']
 
 
 class ImageSerializer(ModelSerializer):
@@ -83,13 +89,13 @@ class ImageSerializer(ModelSerializer):
 
 class ProductSerializer(ModelSerializer):
     product_attributes = AttributeSerializer(many=True, read_only=True, source='attribute')
-    # store_info = StoreSerializer(source='store', read_only=True)
+    store_info = StoreSerializer(source='store', read_only=True)
     category_info = CategoryListSerializer(source='category', read_only=True)
     image_info = ImageSerializer(source='image', read_only=True, many=True)
 
     class Meta:
         model = Product
-        fields = ["id", "name_product", "price", "description", "status", "quantity", "store", "category_info",
+        fields = ["id", "name_product", "price", "description", "status", "quantity", "store_info", "category_info",
                   'product_attributes', 'image_info']
 
 
@@ -135,3 +141,5 @@ class ReviewStoreSerialzer(serializers.ModelSerializer):
     class Meta:
         model = ReviewStore
         fields = '__all__'
+
+

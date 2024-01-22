@@ -115,116 +115,242 @@ def get_count_quantity_product_in_order_by_quarter(quarter):
     return counts_quantity
 
 
-def product_revenue_statistics_in_month(store_id, month):
-    filters = {}
-    if month:
+def product_revenue_statistics_in_month(store_id, product_id, year):
+    data = []
+
+    product_name = Product.objects.filter(id=product_id, store_id=store_id).values('name_product').first()
+
+    if product_name:
+        product_name = product_name['name_product']
+        monthly_data = []
+
+        for month in range(1, 13):
+            start_date = datetime(year, month, 1)
+            end_date = start_date.replace(month=start_date.month % 12 + 1, day=1) - timedelta(days=1)
+
+            product_revenue = (
+                    Product.objects.filter(id=product_id, store_id=store_id,
+                                           orderdetail__order__created_at__date__range=[start_date, end_date])
+                    .annotate(
+                        total_revenue=ExpressionWrapper(
+                            Sum(F('orderdetail__quantity') * F('price'), output_field=FloatField()),
+                            output_field=FloatField()
+                        ),
+                        total_quantity=Sum('orderdetail__quantity')
+                    )
+                    .values('id', 'name_product', 'total_revenue', 'total_quantity')
+                    .first() or {'total_revenue': 0, 'total_quantity': 0}
+            )
+
+            monthly_data.append({
+                'id': product_id,
+                'name_product': product_name,
+                'total_revenue': product_revenue['total_revenue'],
+                'total_quantity': product_revenue['total_quantity'],
+                'month': month
+            })
+
+        data.extend(monthly_data)
+
+    return data
+
+
+def product_revenue_statistics_in_year(store_id, year, product_id):
+    data = []
+    product_name = Product.objects.filter(id=product_id, store_id=store_id).values('name_product').first()
+
+    if product_name:
+        product_name = product_name['name_product']
+        yearly_data = []
+
         current_year = datetime.now().year
-        start_date = datetime(current_year, int(month), 1)
-        end_date = start_date.replace(month=start_date.month % 12 + 1, day=1) - timedelta(days=1)
-        filters['orderdetail__order__created_at__date__range'] = [start_date, end_date]
-        product_revenues = Product.objects.filter(store_id=store_id, **filters).annotate(
-            total_revenue=ExpressionWrapper(
-                Sum(F('orderdetail__quantity') * F('price'), output_field=FloatField()),
-                output_field=FloatField()
+        start_year = year
+
+        for year in range(start_year, current_year + 1):
+            start_date = datetime(year, 1, 1)
+            end_date = datetime(year, 12, 31)
+
+            product_revenue = (
+                    Product.objects.filter(id=product_id, store_id=store_id,
+                                           orderdetail__order__created_at__date__range=[start_date, end_date])
+                    .annotate(
+                        total_revenue=ExpressionWrapper(
+                            Sum(F('orderdetail__quantity') * F('price'), output_field=FloatField()),
+                            output_field=FloatField()
+                        ),
+                        total_quantity=Sum('orderdetail__quantity')
+                    )
+                    .values('id', 'name_product', 'total_revenue', 'total_quantity')
+                    .first() or {'total_revenue': 0, 'total_quantity': 0}
             )
-        ).order_by('name_product').values('name_product', 'total_revenue')
-        return list(product_revenues)
+
+            yearly_data.append({
+                'id': product_id,
+                'name_product': product_name,
+                'total_revenue': product_revenue['total_revenue'],
+                'total_quantity': product_revenue['total_quantity'],
+            })
+        data.extend(yearly_data)
+    return data
 
 
-def product_revenue_statistics_in_year(store_id, year):
-    filters = {}
-    if year:
-        filters['orderdetail__order__created_at__year'] = year
-        product_revenues = Product.objects.filter(store_id=store_id, **filters).annotate(
-            total_revenue=ExpressionWrapper(
-                Sum(F('orderdetail__quantity') * F('price'), output_field=FloatField()),
-                output_field=FloatField()
+def product_revenue_statistics_in_quarter(store_id, year, product_id):
+    data = []
+    product_name = Product.objects.filter(id=product_id, store_id=store_id).values('name_product').first()
+
+    if product_name:
+        product_name = product_name['name_product']
+        quarterly_data = []
+
+        for quarter in range(1, 5):
+            start_date = datetime(year, (quarter - 1) * 3 + 1, 1)
+            # Tính toán ngày cuối cùng của quý
+            end_date = start_date.replace(month=start_date.month + 2) + timedelta(days=30)
+
+            product_revenue = (
+                Product.objects.filter(id=product_id, store_id=store_id,
+                                       orderdetail__order__created_at__date__range=[start_date, end_date])
+                .annotate(
+                    total_revenue=ExpressionWrapper(
+                        Sum(F('orderdetail__quantity') * F('price'), output_field=FloatField()),
+                        output_field=FloatField()
+                    ),
+                    total_quantity=Sum('orderdetail__quantity')
+                )
+                .values('id', 'name_product', 'total_revenue', 'total_quantity')
+                .first()
             )
-        ).order_by('name_product').values('name_product', 'total_revenue')
-        return list(product_revenues)
+            if product_revenue is None:
+                product_revenue = {'total_revenue': 0, 'total_quantity': 0}
+
+            quarterly_data.append({
+                'id': product_id,
+                'name_product': product_name,
+                'total_revenue': product_revenue['total_revenue'],
+                'total_quantity': product_revenue['total_quantity'],
+            })
+        data.extend(quarterly_data)
+    return data
 
 
-def product_revenue_statistics_in_quarter(store_id, quarter):
-    filters = {}
-    if quarter:
-        filters['orderdetail__order__created_at__quarter'] = quarter
-        product_revenues = Product.objects.filter(store_id=store_id, **filters).annotate(
-            total_revenue=ExpressionWrapper(
-                Sum(F('orderdetail__quantity') * F('price'), output_field=FloatField()),
-                output_field=FloatField()
+def category_revenue_statistics_in_month(store_id, year, category_id):
+    data = []
+    category = Product.objects.filter(category=category_id, store_id=store_id).values(
+        'category__name_category').first()
+
+    if category:
+        name_category = category['category__name_category']
+        monthly_data = []
+
+        for month in range(1, 13):
+            start_date = datetime(year, month, 1)
+            end_date = start_date.replace(month=start_date.month % 12 + 1, day=1) - timedelta(days=1)
+
+            category_revenue = (
+                Product.objects.filter(category=category_id, store_id=store_id,
+                                       orderdetail__order__created_at__date__range=[start_date, end_date])
+                .annotate(
+                    total_revenue=ExpressionWrapper(
+                        Sum(F('orderdetail__quantity') * F('price'), output_field=FloatField()),
+                        output_field=FloatField()
+                    ),
+                    total_quantity=Sum('orderdetail__quantity')
+                )
+                .values('category__id', 'total_revenue', 'total_quantity')
+                .order_by('category__id')
             )
-        ).order_by('name_product').values('name_product', 'total_revenue')
-        return list(product_revenues)
+
+            monthly_data.append({
+                'id': category_id,
+                'name_category': name_category,
+                'total_revenue': sum(item['total_revenue'] for item in category_revenue) or 0,
+                'total_quantity': sum(item['total_quantity'] for item in category_revenue) or 0,
+                'month': month
+            })
+
+        data.extend(monthly_data)
+
+    return data
 
 
-def category_revenue_statistics_in_month(store_id, month):
-    filters = {}
-    if month:
+def category_revenue_statistics_in_year(store_id, year, category_id):
+    data = []
+    category = Product.objects.filter(category=category_id, store_id=store_id).values(
+        'category__name_category').first()
+
+    if category:
+        name_category = category['category__name_category']
+        yearly_data = []
+
         current_year = datetime.now().year
-        start_date = datetime(current_year, int(month), 1)
-        end_date = start_date.replace(month=start_date.month % 12 + 1, day=1) - timedelta(days=1)
-        filters['orderdetail__order__created_at__date__range'] = [start_date, end_date]
-        category_revenues = Product.objects.filter(store_id=store_id, **filters).values(
-            'category__name_category').annotate(
-            total_revenue=Sum(Cast('orderdetail__quantity', FloatField()) * F('price'), output_field=FloatField())
-        ).order_by('category__name_category').values('category__name_category', 'total_revenue')
-        return category_revenues
+        start_year = year
+
+        for year in range(start_year, current_year + 1):
+            start_date = datetime(year, 1, 1)
+            end_date = datetime(year, 12, 31)
+
+            category_revenue = (
+                Product.objects.filter(category=category_id, store_id=store_id,
+                                       orderdetail__order__created_at__date__range=[start_date, end_date])
+                .annotate(
+                    total_revenue=ExpressionWrapper(
+                        Sum(F('orderdetail__quantity') * F('price'), output_field=FloatField()),
+                        output_field=FloatField()
+                    ),
+                    total_quantity=Sum('orderdetail__quantity')
+                )
+                .values('category__id', 'total_revenue', 'total_quantity')
+                .order_by('category__id')
+            )
+
+            yearly_data.append({
+                'id': category_id,
+                'name_category': name_category,
+                'total_revenue': sum(item['total_revenue'] for item in category_revenue) or 0,
+                'total_quantity': sum(item['total_quantity'] for item in category_revenue) or 0,
+                'year': year
+            })
+
+        data.extend(yearly_data)
+
+    return data
 
 
-def category_revenue_statistics_in_year(store_id, year):
-    filters = {}
-    if year:
-        filters['orderdetail__order__created_at__year'] = year
-        category_revenues = Product.objects.filter(store_id=store_id, **filters).values(
-            'category__name_category').annotate(
-            total_revenue=Sum(Cast('orderdetail__quantity', FloatField()) * F('price'), output_field=FloatField())
-        ).order_by('category__name_category').values('category__name_category', 'total_revenue')
-        return category_revenues
+def category_revenue_statistics_in_quarter(store_id, year, category_id):
+    data = []
+    category = Product.objects.filter(category=category_id, store_id=store_id).values(
+        'category__name_category').first()
 
+    if category:
+        name_category = category['category__name_category']
+        quarterly_data = []
 
-def category_revenue_statistics_in_quarter(store_id, quarter):
-    filters = {}
-    if quarter:
-        filters['orderdetail__order__created_at__quarter'] = quarter
-        category_revenues = Product.objects.filter(store_id=store_id, **filters).values(
-            'category__name_category').annotate(
-            total_revenue=Sum(Cast('orderdetail__quantity', FloatField()) * F('price'), output_field=FloatField())
-        ).order_by('category__name_category').values('category__name_category', 'total_revenue')
-        return category_revenues
+        for quarter in range(1, 5):
+            start_date = datetime(year, (quarter - 1) * 3 + 1, 1)
+            # Tính toán ngày cuối cùng của quý
+            end_date = start_date.replace(month=start_date.month + 2) + timedelta(days=30)
 
+            category_revenue = (
+                Product.objects.filter(category=category_id, store_id=store_id,
+                                       orderdetail__order__created_at__date__range=[start_date, end_date])
+                .annotate(
+                    total_revenue=ExpressionWrapper(
+                        Sum(F('orderdetail__quantity') * F('price'), output_field=FloatField()),
+                        output_field=FloatField()
+                    ),
+                    total_quantity=Sum('orderdetail__quantity')
+                )
+                .values('category__id', 'total_revenue', 'total_quantity')
+                .order_by('category__id')
+            )
 
-# def product_revenue_12month_of_year(store_id, year):
-#     year = int(year)  # Chuyển 'year' sang kiểu số nguyên nếu nó được truyền dưới dạng chuỗi
-#
-#     # Tạo một danh sách chứa 12 tháng của năm
-#     months = [datetime(year, month, 1) for month in range(1, 13)]
-#
-#     # Tạo một danh sách chứa các truy vấn cho từng tháng
-#     queries = []
-#     for month in months:
-#         next_month = month + timedelta(days=32)
-#         query = ExpressionWrapper(
-#             Coalesce(
-#                 Sum(
-#                     Case(
-#                         When(
-#                             orderdetail__order__created_at__gte=month,
-#                             orderdetail__order__created_at__lt=next_month,
-#                             then=ExpressionWrapper(F('orderdetail__quantity') * F('price'), output_field=FloatField())
-#                         ),
-#                         default=Value(0),
-#                         output_field=FloatField()
-#                     )
-#                 ),
-#                 Value(0)
-#             ),
-#             output_field=FloatField()
-#         )
-#         queries.append(query)
-#
-#         # Thực hiện các truy vấn và kết hợp kết quả
-#     product_revenues = Product.objects.filter(store_id=store_id, orderdetail__order__created_at__year=year).annotate(
-#         **{f'total_revenue_{month.strftime("%b")}': query for month, query in zip(months, queries)}
-#     ).order_by('name_product').values('name_product', *[f'total_revenue_{month.strftime("%b")}' for month in months])
-#
-#     return product_revenues
+            quarterly_data.append({
+                'id': category_id,
+                'name_category': name_category,
+                'total_revenue': sum(item['total_revenue'] for item in category_revenue) or 0,
+                'total_quantity': sum(item['total_quantity'] for item in category_revenue) or 0,
+            })
+
+        data.extend(quarterly_data)
+
+    return data

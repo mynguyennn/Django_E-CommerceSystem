@@ -2,27 +2,32 @@ import datetime
 from ast import Str
 from calendar import calendar
 from collections import deque
-from itertools import product, accumulate
+from itertools import product, accumulate, starmap
+from pickletools import genops
+from statistics import mean
 from urllib.parse import urljoin
 
 from _testmultiphase import Str
 from ckeditor_uploader.views import upload
 from django.contrib.admin import action
+from django.contrib.sessions.backends.db import SessionStore
+from django.core import mail
+from django.db.models import Q, Sum, Avg, Count
 from django.db.models.expressions import Ref
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import viewsets, generics, permissions, status, parsers
+from rest_framework import viewsets, generics, permissions, status, parsers, request
 from rest_framework.decorators import action, api_view
 from rest_framework.generics import DestroyAPIView
 from rest_framework.response import Response
 from sqlparse.utils import imt
 from urllib3 import request
 
-from . import serializers, dao
+from . import serializers, dao, paginations
 from .models import Product, Category, Account, Image, UserRole, Order, Store, Attribute, PaymentType, ShippingType, \
-    OrderDetail, CommentProduct, ReviewStore
+    OrderDetail, CommentProduct, ReviewStore, Follow
 from .serializers import RoleSerializer, ProductSerializer, CategorySerializer, AccountSerializer, ImageSerializer, \
-    CommentProductSerializer, ReviewStoreSerialzer, StoreSerializer, AttributeSerializer, AccountShowAvt
+    CommentProductSerializer, ReviewStoreSerialzer, StoreSerializer, AttributeSerializer, FollowSerializer
 from eCommerce import perms
 
 
@@ -31,7 +36,7 @@ from eCommerce import perms
 #         return request.account and request.account.is_staff
 
 
-class AccountViewSet(viewsets.ViewSet, generics.CreateAPIView):
+class AccountViewSet(viewsets.ViewSet, generics.CreateAPIView, generics.UpdateAPIView, generics.ListAPIView):
     # RetrieveAPIView lay thong in user dang login
     queryset = Account.objects.filter(is_active=True)
     serializer_class = serializers.AccountSerializer  # serializer du lieu ra thanh json
@@ -40,27 +45,6 @@ class AccountViewSet(viewsets.ViewSet, generics.CreateAPIView):
     # permission_classes = [permissions.IsAuthenticated]
 
     # permission_classes = [IsAdmin]
-    @swagger_auto_schema(
-        operation_description="Get the current user",
-        manual_parameters=[
-            openapi.Parameter(
-                name="Authorization",
-                in_=openapi.IN_HEADER,
-                type=openapi.TYPE_STRING,
-                description="Bearer token",
-                required=False,
-                default="Bearer your_token_here"
-            )
-        ],
-        responses={
-            200: openapi.Response(
-                description="SMS sent with password reset instructions",
-            ),
-            400: openapi.Response(
-                description="User with this phone number does not exist",
-            ),
-        }
-    )
     @action(methods=['get'], url_name='current_account', detail=False)
     def current_account(self, request):
         return Response(serializers.AccountSerializer(request.user).data)
@@ -108,18 +92,6 @@ class AccountViewSet(viewsets.ViewSet, generics.CreateAPIView):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-class ShowAccountViewSet(viewsets.ViewSet):
-    queryset = Account.objects.all()
-    serializer_class = serializers.AccountShowAvt
-    parser_classes = [parsers.MultiPartParser]
-
-    @action(methods=['GET'], detail=False)
-    def get_account(self, request):
-        query = self.queryset
-        account = self.serializer_class(query, many=True)
-        return Response(account.data)
-
-
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
@@ -129,7 +101,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class ProductViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    # pagination_class = paginations.ProductPagination
+    pagination_class = paginations.ProductPagination
     parser_classes = [parsers.MultiPartParser]
 
     # permission_classes = [permissions.IsAuthenticated]
@@ -334,12 +306,9 @@ class ProductViewSet(viewsets.ViewSet, generics.ListAPIView):
     @action(methods=['GET'], detail=False)
     def get_query(self, request):
         query = self.queryset
-        name_product = self.request.query_params.get("name_product")
-        if name_product:
-            query = query.filter(name_product__icontains=name_product)
-        name_store = self.request.query_params.get("name_store")
-        if name_store:
-            query = query.filter(store__name_store__icontains=name_store)
+        key = self.request.query_params.get("key")
+        if key:
+            query = query.filter(Q(name_product__icontains=key) | Q(store__name_store__icontains=key))
         serializer = ProductSerializer(query, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -360,6 +329,28 @@ class ProductViewSet(viewsets.ViewSet, generics.ListAPIView):
         sort_price = self.queryset.order_by('-price')
         serializer = ProductSerializer(sort_price, many=True)
         return Response(serializer.data)
+
+    @action(methods=['GET'], detail=True)
+    def count_product_bought(self, request, pk):
+        product = Product.objects.get(pk=pk)
+        product_bought = OrderDetail.objects.filter(product=product).aggregate(Sum('quantity'))['quantity__sum'] or 0
+        return Response({'product_bought': product_bought})
+
+    @action(methods=['GET'], detail=True)
+    def avg_rating(self, request, pk):
+        product = Product.objects.get(pk=pk)
+        #  rating__range=(1, 5))  lọc các đánh giá có rating từ 1 đến 5
+        avg_rating = CommentProduct.objects.filter(orderDetail__product=product, rating__range=(1, 5)) \
+            .aggregate(avg_rating=Avg('rating'))['avg_rating'] or 0
+        # làm tròn đến 1 chữ số thập phân
+        rounded_avg_rating = round(avg_rating, 1) if avg_rating is not None else 0
+        return Response({'avg_rating': rounded_avg_rating})
+
+    @action(methods=['GET'], detail=True)
+    def count_comment_product(self, request, pk):
+        product = Product.objects.get(pk=pk)
+        count = CommentProduct.objects.filter(orderDetail__product=product).aggregate(comment=Count('id'))
+        return Response({'count': count})
 
 
 class ImageViewSet(viewsets.ModelViewSet):
@@ -477,28 +468,37 @@ class OrderViewSet(viewsets.ViewSet):
         return Response(data, status=status.HTTP_200_OK)
 
 
-class StoreViewSet(viewsets.ViewSet, generics.ListAPIView, generics.DestroyAPIView):
+class StoreViewSet(viewsets.ViewSet, generics.ListAPIView,
+                   generics.DestroyAPIView, generics.UpdateAPIView):
     queryset = Store.objects.all()
     serializer_class = serializers.StoreSerializer
 
     # permission_classes = [permissions.IsAuthenticated]
+    def retrieve(self, request, pk=None):
+        try:
+            store = self.queryset.get(pk=pk)
+            serializer = self.serializer_class(store)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Product.DoesNotExist:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['POST'], detail=False)
     def create_store(self, request):
         user = request.user
         store_name = request.data.get('name_store')
         address = request.data.get('address')
+        avt = request.data.get('avt')
         if user.role_id != 3:
             account = Account.objects.get(pk=user.id)
             role = UserRole.objects.get(pk=3)
-            store = Store.objects.create(name_store=store_name, address=address, active=1, account=account)
+            store = Store.objects.create(name_store=store_name, address=address, active=0, account=account, avt=avt)
             account.role_id = role
             account.save()
             store.save()
             return Response(serializers.StoreSerializer(store).data, status=status.HTTP_200_OK)
         else:
             account = Account.objects.get(pk=user.id)
-            store = Store.objects.create(name_store=store_name, address=address, active=1, account=account)
+            store = Store.objects.create(name_store=store_name, address=address, active=0, account=account, avt=avt)
             store.save()
             return Response(serializers.StoreSerializer(store).data, status=status.HTTP_200_OK)
 
@@ -561,92 +561,211 @@ class StoreViewSet(viewsets.ViewSet, generics.ListAPIView, generics.DestroyAPIVi
     @action(methods=['GET'], detail=True)
     def product_revenue_in_month(self, request, pk):
         data = []
-        month = request.query_params.get('month')
-        pro_revenue = dao.product_revenue_statistics_in_month(pk, month)
-        for c in pro_revenue:
-            data.append({
-                'name_product': c['name_product'],
-                'total_revenue': c['total_revenue']
-            })
-        return Response(data, status=status.HTTP_200_OK)
+        product_id = request.query_params.get('product_id')
+        year_select = request.query_params.get('year')
+        year = int(year_select) if year_select else None
+        pro_revenue = dao.product_revenue_statistics_in_month(pk, product_id, year)
+        if pro_revenue is not None:
+            for c in pro_revenue:
+                data.append({
+                    'id': c.get('id'),
+                    'name_product': c.get('name_product'),
+                    'total_revenue': c.get('total_revenue'),
+                    'total_quantity': c.get('total_quantity')
+                })
+            return Response(data, status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
     @action(methods=['GET'], detail=True)
     def product_revenue_in_year(self, request, pk):
         data = []
-        year = request.query_params.get('year')
-        pro_revenue = dao.product_revenue_statistics_in_year(pk, year)
-        for p in pro_revenue:
-            data.append({
-                'name_product': p['name_product'],
-                'total_revenue': p['total_revenue']
-            })
-        return Response(data, status=status.HTTP_200_OK)
+        year_select = request.query_params.get('year')
+        year = int(year_select) if year_select else None
+        product_id = request.query_params.get('product_id')
+        pro_revenue = dao.product_revenue_statistics_in_year(pk, year, product_id)
+        if pro_revenue is not None:
+            for c in pro_revenue:
+                data.append({
+                    'id': c.get('id'),
+                    'name_product': c.get('name_product'),
+                    'total_revenue': c.get('total_revenue'),
+                    'total_quantity': c.get('total_quantity')
+                })
+            return Response(data, status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
     @action(methods=['GET'], detail=True)
     def product_revenue_in_quarter(self, request, pk):
         data = []
-        quarter = request.query_params.get('quarter')
-        pro_revenue = dao.product_revenue_statistics_in_quarter(pk, quarter)
-        for p in pro_revenue:
-            data.append({
-                'name_product': p['name_product'],
-                'total_revenue': p['total_revenue']
-            })
-        return Response(data, status=status.HTTP_200_OK)
+        year_select = request.query_params.get('year')
+        year = int(year_select) if year_select else None
+        product_id = request.query_params.get('product_id')
+        pro_revenue = dao.product_revenue_statistics_in_quarter(pk, year, product_id)
+        if pro_revenue is not None:
+            for c in pro_revenue:
+                data.append({
+                    'id': c.get('id'),
+                    'name_product': c.get('name_product'),
+                    'total_revenue': c.get('total_revenue'),
+                    'total_quantity': c.get('total_quantity')
+                })
+            return Response(data, status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
     @action(methods=['GET'], detail=True)
     def category_revenue_in_month(self, request, pk):
         data = []
-        month = request.query_params.get('month')
-        cate_revenue = dao.category_revenue_statistics_in_month(pk, month)
-        for c in cate_revenue:
-            data.append({
-                'name_category': c['category__name_category'],
-                'category_revenues': c['total_revenue']
-            })
-        return Response(data, status=status.HTTP_200_OK)
+        year_select = request.query_params.get('year')
+        category_id = request.query_params.get('category_id')
+        year = int(year_select) if year_select else None
+        cate_revenue = dao.category_revenue_statistics_in_month(pk, year, category_id)
+        if cate_revenue is not None:
+            for c in cate_revenue:
+                data.append({
+                    'id': c.get('id'),
+                    'name_category': c.get('name_category'),
+                    'total_revenue': c.get('total_revenue'),
+                    'total_quantity': c.get('total_quantity'),
+                    'month': c.get('month')
+                })
+            return Response(data, status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
     @action(methods=['GET'], detail=True)
     def category_revenue_in_year(self, request, pk):
         data = []
-        year = request.query_params.get('year')
-        cate_revenue = dao.category_revenue_statistics_in_year(pk, year)
-        for c in cate_revenue:
-            data.append({
-                'name_category': c['category__name_category'],
-                'category_revenues': c['total_revenue']
-            })
-        return Response(data, status=status.HTTP_200_OK)
+        year_select = request.query_params.get('year')
+        category_id = request.query_params.get('category_id')
+        year = int(year_select) if year_select else None
+        cate_revenue = dao.category_revenue_statistics_in_year(pk, year, category_id)
+        if cate_revenue is not None:
+            for c in cate_revenue:
+                data.append({
+                    'id': c.get('id'),
+                    'name_category': c.get('name_category'),
+                    'total_revenue': c.get('total_revenue'),
+                    'total_quantity': c.get('total_quantity'),
+                    'year': c.get('year')
+                })
+            return Response(data, status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
     @action(methods=['GET'], detail=True)
-    def category_revenue_in_quater(self, request, pk):
+    def category_revenue_in_quarter(self, request, pk):
         data = []
-        quarter = request.query_params.get('quarter')
-        cate_revenue = dao.category_revenue_statistics_in_quarter(pk, quarter)
-        for c in cate_revenue:
-            data.append({
-                'name_category': c['category__name_category'],
-                'category_revenues': c['total_revenue']
-            })
-        return Response(data, status=status.HTTP_200_OK)
+        year_select = request.query_params.get('year')
+        category_id = request.query_params.get('category_id')
+        year = int(year_select) if year_select else None
+        cate_revenue = dao.category_revenue_statistics_in_quarter(pk, year, category_id)
+        if cate_revenue is not None:
+            for c in cate_revenue:
+                data.append({
+                    'id': c.get('id'),
+                    'name_category': c.get('name_category'),
+                    'total_revenue': c.get('total_revenue'),
+                    'total_quantity': c.get('total_quantity'),
+                })
+            return Response(data, status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
-    # @action(methods=['GET'], detail=True)
-    # def product_revenue_12month_of_year(self, request, pk):
-    #     data =[]
-    #     year = int(request.data.get('select_year'))  # Convert to integer
-    #     months = [datetime.date(year, month, 1) for month in range(1, 13)]
-    #     product_revneue = dao.product_revenue_12month_of_year(pk, year)
-    #     for p in product_revneue:
-    #         total_revenue = 0
-    #         for month in months:  # Giả sử months là một danh sách các đối tượng datetime cho mỗi tháng
-    #             total_revenue_key = f'total_revenue_{month.strftime("%b")}'
-    #             total_revenue += p[total_revenue_key]
-    #
-    #         data.append({
-    #             'name_product': p['name_product'],
-    #             'total_revenue': total_revenue
-    #         })
-    #     return Response(data, status=status.HTTP_200_OK)
+    @action(methods=['POST'], detail=True)
+    def add_follow(self, request, pk):
+        store_id = self.get_object()
+        follower_id = request.data.get('account_id')
+        try:
+            follower = Account.objects.get(pk=follower_id)
+        except Account.DoesNotExist:
+            return Response('Không tìm được tài khoản', status=status.HTTP_400_BAD_REQUEST)
+        try:
+            follow = Follow.objects.get(store=store_id, follower=follower)
+            follow.delete()
+            return Response('Đã hủy theo dõi cửa hàng', status=status.HTTP_200_OK)
+        except:
+            follow = Follow.objects.create(store=store_id, follower=follower)
+            follow.save()
+            return Response(serializers.FollowSerializer(follow).data, status=status.HTTP_200_OK)
+
+    @action(methods=['GET'], detail=False)
+    def get_store_to_confirm(self, request):
+        store = Store.objects.filter(active=0)
+        store_show = StoreSerializer(store, many=True)
+        return Response(store_show.data, status=status.HTTP_200_OK)
+
+    @action(methods=['GET'], detail=True)
+    def confirm_store(self, request, pk):
+        store = self.get_object()
+        success_count = 0
+        if store.active == 0:
+            store.active = 1
+            store.save()
+            store_account_email = store.account.email
+            store_account = store.account.full_name
+            # breakpoint()
+            subject = f"{store_account} có tin mới !!!"
+            ten_nguoi_gui = 'Nhân Viên Sàn Thương Mại Điện Tử'
+
+            html_content = f"""
+                <p>Xin chào {store_account},</p>
+                <p>Chúng tôi xin thông báo rằng cửa hàng của bạn đã được xác nhận thành công. Hiện tại bạn đã có thể đăng sản phẩm bán hàng.</p>   
+                 """
+            from_email = "nguyentoanmy112002@gmail.com"
+            to = [store_account_email]
+
+            try:
+                with mail.get_connection() as connection:
+                    msg = mail.EmailMessage(subject, html_content, from_email, to, connection=connection)
+                    msg.content_subtype = "html"
+                    success_count = msg.send()
+
+                if success_count == 1:
+                    return Response({'message': 'Email sent successfully.'}, status=status.HTTP_200_OK)
+                else:
+                    return Response({'message': 'Failed to send email.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            except Exception as e:
+                return Response({'message': f'Error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            return Response('Xác nhận cửa hàng thành công', status=status.HTTP_200_OK)
+        else:
+            return Response('Cửa hàng đã được xác nhận', status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['GET'], detail=True)
+    def count_follower(self, request, pk):
+        store = Store.objects.get(pk=pk)
+        follower_count = Follow.objects.filter(store=store, follower__is_active=True).count()
+        return Response({'count_follower': follower_count}, status=status.HTTP_200_OK)
+
+    @action(methods=['GET'], detail=True)
+    def load_review_store(self, request, pk):
+        data =[]
+        store = Store.objects.get(pk=pk)
+        product = Product.objects.filter(store=store)
+        review = CommentProduct.objects.filter(orderDetail__product__in=product)
+        for r in review:
+            data.append({
+                'product_name': r.orderDetail.product.name_product,
+                'comment': r.content,
+                'rating': r.rating,
+            })
+        return Response({'review': data})
+
+    @action(methods=['GET'], detail=True)
+    def avg_rating_store(self, request, pk):
+        store = Store.objects.get(pk=pk)
+
+        product = Product.objects.filter(store=store)
+        # Tính trung bình rating của tất cả sản phẩm trong cửa hàng trong khoảng từ 1 đến 5
+        avg_rating = CommentProduct.objects.filter(orderDetail__product__in=product) \
+            .aggregate(Avg('rating'))['rating__avg'] or 0
+
+        # Làm tròn giá trị trung bình đến 1 chữ số thập phân
+        avg_rating = round(avg_rating, 1) if avg_rating else 0
+        return Response({'avg_rating': avg_rating})
 
 
 class OrderDetailViewSet(viewsets.ViewSet, generics.ListAPIView):
@@ -659,7 +778,6 @@ class OrderDetailViewSet(viewsets.ViewSet, generics.ListAPIView):
         orderdetail_id = OrderDetail.objects.get(id=pk)
         rating_pro = int(request.data.get('rating'))
         content_pro = request.data.get('content')
-        # breakpoint()
         try:
             account = Account.objects.get(id=account_id)
         except Account.DoesNotExist:
@@ -688,7 +806,8 @@ class PaymentView(viewsets.ViewSet, generics.ListAPIView,
     serializer_class = serializers.PaymentTypeSerializer
 
 
-class CommentView(viewsets.ViewSet, generics.ListAPIView, generics.UpdateAPIView):
+class CommentView(viewsets.ViewSet, generics.ListAPIView,
+                  generics.UpdateAPIView, generics.DestroyAPIView):
     queryset = CommentProduct.objects.all()
     serializer_class = serializers.CommentProductSerializer
 
@@ -699,6 +818,12 @@ class CommentView(viewsets.ViewSet, generics.ListAPIView, generics.UpdateAPIView
             return [perms.OwnerAuth()]
         return [permissions.AllowAny()]
 
+    def permissions_delete(self):
+        if self.action in ['delete']:
+            return [perms.OwnerAuth] or request.user.role_id != 3
+        return [permissions.AllowAny]
+
+    # thiếu điều kiện
     @action(methods=['POST'], detail=True)
     def reply_comment(self, request, pk):
         account_id = request.data.get('account_id')
@@ -710,7 +835,6 @@ class CommentView(viewsets.ViewSet, generics.ListAPIView, generics.UpdateAPIView
             account = Account.objects.get(id=account_id)
         except Account.DoesNotExist:
             return Response("Không tìm thấy tài khoản.", status=status.HTTP_400_BAD_REQUEST)
-
         try:
             orderdetail_id = OrderDetail.objects.get(id=orderdetail)
         except:
@@ -728,3 +852,13 @@ class CommentView(viewsets.ViewSet, generics.ListAPIView, generics.UpdateAPIView
 class ReviewStoreView(viewsets.ViewSet, generics.ListAPIView):
     queryset = ReviewStore.objects.all()
     serializer_class = serializers.ReviewStoreSerialzer
+
+
+class FollowViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = Follow.objects.all()
+    serializer_class = FollowSerializer
+
+
+class AttributeViewSet(viewsets.ViewSet, generics.ListAPIView, generics.DestroyAPIView):
+    queryset = Attribute.objects.all()
+    serializer_class = AttributeSerializer

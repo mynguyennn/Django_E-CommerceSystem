@@ -37,6 +37,14 @@ INSTALLED_APPS = [
 CLIENT_ID = "dMlVgp3i59e91nDEGZ0Kq6D7uLX6MKLq3RL68eoT"
 CLIENT_SECRET = "hA095gEXYFSqRCnt2fN2qgzWRL7M6Xpay3Bjd8ddQLVc7LhQzH7mYibKpOrMR7soZhthIaWsKf6rxBHDWohV5ePKNIMFmQQT9gEgS3Dt3ngvlv6zftrKtwk8usb5wFLH"
 
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'nguyentoanmy112002@gmail.com'
+EMAIL_HOST_PASSWORD = 'dupyocwiywnnbpop'
+
 import cloudinary
 
 cloudinary.config(
