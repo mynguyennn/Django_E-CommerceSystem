@@ -1,0 +1,22 @@
+{% extends "vnpay/base_layout.html" %}
+{% block content %}
+<div class="panel panel-default">
+    <div class="panel-heading">{{ title }}: {{ result }}</div>
+    <div class="panel-body">
+        <p>Mã hóa đơn: {{ order_id }}</p>
+        <p>Mã giỏ hàng: {{ order_desc }}</p>
+        <p>Mã giao dịch: {{ vnp_TransactionNo }}</p>
+        <p>Tổng tiền: {{ amount }}</p>
+        {% if vnp_ResponseCode == '00' %}
+        <p>Trạng thái: Thanh toán thành công</p>
+        {% else %}
+        <p>Trạng thái: Thanh toán không thành công</p>
+        {% endif %}
+        {% if msg %}
+        <p class="alert-warning"> {{ msg }}</p>
+        {% endif %}
+    </div>
+    <!--    <a href="http://localhost:8081">Trở lại ứng dụng Expo</a>-->
+</div>
+
+{% endblock %}

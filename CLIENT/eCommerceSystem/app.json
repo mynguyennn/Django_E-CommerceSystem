@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "eCommerceSystem",
+    "slug": "eCommerceSystem",
+    "version": "1.0.0",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "scheme": "ecommerceapp",
+    "extra": {
+      "eas": {
+        "projectId": "8694f2f5-fd37-47f4-b811-ed9603f4ce55"
+      }
+    },
+    "android": {
+      "googleServicesFile": "./google-services.json"
+    }
+  },
+  "name": "eCommerceSystem"
+}

@@ -1,0 +1,93 @@
+<!-- paypal_success.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>paypal_success</title>
+
+    <style>
+    body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 24vh;
+        zoom: 2;
+        font-family: 'Nunito', sans-serif;
+    }
+
+    .bgBill {
+        border: 1.5px solid #d7d7d7;
+    <!--    padding: 20px;-->
+        width: 800px;
+        margin-top: 15px;
+    }
+
+    .result {
+        background: #f2f2f2;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        color: black;
+        text-align: center;
+    }
+
+    .result p {
+        margin: 0;
+        font-size: 20px;
+        margin-left: 20px;
+        margin-right: 20px;
+    }
+    h2{
+        text-align: start;
+        color:#3771e0;
+    <!--    margin-left: 15px;-->
+    }
+    p{
+        margin-left: 20px;
+        margin-right: 20px;
+        padding: 5px
+    }
+    .text{
+        display: flex;
+        width: 475px;
+        justify-content: start;
+        margin-bottom: 10px;
+<!--        margin-left: 100px;-->
+    }
+    .br{
+       height: 1px;
+        width: 470px;
+        padding-top: 50px;
+        border: 0.9px solid #e2e2e2;
+        padding: 0;
+        margin: 0;
+        margin-top: 30px;
+    }
+    .text2024 p{
+        color: #b0b0b0;
+        font-size: 17px
+    }
+
+    </style>
+</head>
+<body>
+<div class="text">
+    <h2>PAYPAL DEMO</h2>
+</div>
+<div class="bgBill">
+    <div class="result"><p>Kết quả thanh toán: Thành công</p></div>
+    <div>
+        <p>Mã hóa đơn: {{ bill.bill_code }}</p>
+        <p>Mã giỏ hàng: {{ bill.order_id }}</p>
+        <p>Mã giao dịch: {{ bill.bill_transactionNo }}</p>
+        <p>Tổng tiền: {{ bill.total_amount }}</p>
+        <p>Trạng thái: Thanh toán thành công</p>
+    </div>
+
+</div>
+<div class="br"></div>
+<div class="text2024">
+    <p>© PAYPAL 2024</p>
+</div>
+</body>
+</html>

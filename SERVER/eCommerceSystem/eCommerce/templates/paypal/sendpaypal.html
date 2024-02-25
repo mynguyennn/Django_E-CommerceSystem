@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>send_paypal</title>
+    <script src="https://www.paypal.com/sdk/js?client-id=AT4KB_vEbxOic1FdrmVqGpKZ-kBYa-1Q3kSCUcjLYzaP-nSjhz0MpAaz_cFHpQdeDu6OTA8S6jRuUCSR&currency=USD"></script>
+        <style>
+        body {
+            background-color: #1F1F1F;
+            height: 50vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+        }
+
+        .navContainer {
+            width: 400px;
+            transform: scale(2.4);
+        }
+
+        .outlet{
+            animation-name: show-component;
+            zoom: 2 !important;
+        }
+
+
+        </style>
+
+</head>
+<body>
+<nav class="navContainer">
+    <div class="bgButton">
+        <div id="paypal-button-container"></div>
+    </div>
+    <!--    <div>-->
+    <!--        <p>Bill Code: <span id="bill_code"></span></p>-->
+    <!--        <p>Transaction ID: <span id="transaction_id"></span></p>-->
+    <!--        <p>Amount: <span id="amount"></span></p>-->
+    <!--    </div>-->
+</nav>
+<input type="hidden" id="paypalData_giohang_id" value="5" />
+<input type="hidden" id="paypalData_total_amount" value="100" />
+<script>
+    paypal.Buttons({
+      createOrder: function (data, actions) {
+        return actions.order.create({
+          purchase_units: [
+            {
+              amount: {
+                value: document.getElementById("paypalData_total_amount").value,
+              },
+            },
+          ],
+          application_context: {
+            custom: {
+              giohang_id: document.getElementById("paypalData_giohang_id").value,
+            }
+          }
+        });
+      },
+      onApprove: function (data, actions) {
+        return actions.order.capture().then(function (orderData) {
+          console.log("Capture result", orderData, JSON.stringify(orderData, null, 2));
+          var transaction = orderData.purchase_units[0].payments.captures[0];
+
+            fetch('/sendpaypal/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  ...orderData,
+                  giohang_id: document.getElementById("paypalData_giohang_id").value,
+                }),
+            }) .then(response => {
+                if (response.ok) {
+                    window.location.href = '/paypal_success/' + orderData.id;
+                } else {
+                    alert('Thanh toán không thành công!');
+                }
+            });
+          alert("Transaction" + transaction.status + ": " + transaction.id + "\n\nThanh toán thành công!");
+        });
+      },
+    }).render("#paypal-button-container");
+
+
+</script>
+
+
+<!-- <script>-->
+<!--      paypal.Buttons({-->
+<!--          createOrder: function (data, actions) {-->
+<!--            return actions.order.create({-->
+<!--              purchase_units: [-->
+<!--                {-->
+<!--                  amount: {-->
+<!--                    value: "123",-->
+<!--                  },-->
+<!--                },-->
+<!--              ],-->
+<!--            });-->
+<!--          },-->
+<!--          onApprove: function (data, actions) {-->
+<!--            return actions.order.capture().then(function (orderData) {-->
+<!--              console.log( "Capture result", orderData, JSON.stringify(orderData, null, 2));-->
+<!--              var transaction = orderData.purchase_units[0].payments.captures[0];-->
+<!--              alert("Transaction" + transaction.status + ": " + transaction.id + "\n\nSee console for all available details");-->
+<!--            });-->
+<!--          },-->
+<!--        }).render("#paypal-button-container");-->
+<!--    </script>-->
+
+
+</body>
+</html>
