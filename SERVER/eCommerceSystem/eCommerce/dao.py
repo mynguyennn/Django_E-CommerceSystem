@@ -47,10 +47,9 @@ def get_order_count_in_year(year):
     if year:
         filters['order__created_at__year'] = year
         filters['order__status_pay'] = 1
-        order_counts = OrderDetail.objects.filter(**filters).values('product__store__name_store').annotate(
-            order_counts=Count('order_id')
-        ).order_by().values('product__store__name_store', 'order_counts')
-    return order_counts
+        order_count_by_store = OrderDetail.objects.values('product__store__name_store').annotate(
+            order_counts=Count('order', distinct=True))
+        return order_count_by_store
 
 
 def get_order_count_in_quarter(quarter):
@@ -61,10 +60,9 @@ def get_order_count_in_quarter(quarter):
         filters['order__created_at__year'] = current_year
         filters['order__status_pay'] = 1
         filters['order__created_at__quarter'] = quarter
-        order_counts = OrderDetail.objects.filter(**filters).values('product__store__name_store').annotate(
-            order_counts=Count('order_id')
-        ).order_by().values('product__store__name_store', 'order_counts')
-    return order_counts
+        order_count_by_store = OrderDetail.objects.values('product__store__name_store').annotate(
+            order_counts=Count('order', distinct=True))
+        return order_count_by_store
 
 
 def get_count_quantity_product_in_order_by_month(month):
