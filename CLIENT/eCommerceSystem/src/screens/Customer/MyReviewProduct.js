@@ -15,7 +15,7 @@ import {
 import DropDown from "react-native-dropdown-picker";
 import { useRoute } from "@react-navigation/native";
 import { AirbnbRating, Rating } from "react-native-ratings";
-import { LoginContext } from "../../../App";
+import { useLogin } from "../../context/LoginContext";
 
 const windownWidth = Dimensions.get("window").width;
 const windownHeight = Dimensions.get("window").height;
@@ -61,7 +61,7 @@ const HeaderComponent = ({ navigation }) => {
 
 const ContentComponent = ({ navigation }) => {
   const [productList, setProductList] = useState([]);
-  const [user, dispatch] = useContext(LoginContext);
+  const [user, dispatch] = useLogin();
 
   useEffect(() => {
     const fetchData = async () => {

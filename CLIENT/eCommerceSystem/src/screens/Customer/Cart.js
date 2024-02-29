@@ -10,14 +10,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { LoginContext } from "../../../App";
+import { useLogin } from "../../context/LoginContext";
 import { useCart } from "../../context/CartContext";
 
 const windownWidth = Dimensions.get("window").width;
 const windownHeight = Dimensions.get("window").height;
 
 export default Cart = ({ navigation }) => {
-  const [user, dispatch] = useContext(LoginContext);
+  const [user, dispatch] = useLogin();
   const [{ cartItems }, dispatchCart] = useCart();
 
   const isLoggedIn = user !== null;
@@ -244,7 +244,6 @@ const ContentComponent = ({
         <>
           {cartItems.map((item, index) => (
             <CartItem
-            
               key={index}
               item={item}
               isLoggedIn={isLoggedIn}

@@ -4,7 +4,7 @@ import axios, { endpoints } from "../../config/API";
 import { AirbnbRating, Rating } from "react-native-ratings";
 import { useRoute } from "@react-navigation/native";
 
-import { LoginContext } from "../../../App";
+import { useLogin } from "../../context/LoginContext";
 import {
   Dimensions,
   SafeAreaView,
@@ -45,7 +45,7 @@ export default ProfileStore = ({ navigation }) => {
 const HeaderComponent = ({ navigation, storeID }) => {
   const [storeInfo, setStoreInfo] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [user, dispatch] = useContext(LoginContext);
+  const [user, dispatch] = useLogin();
   const [followedStores, setFollowedStores] = useState([]);
   const [followerCount, setFollowerCount] = useState(null);
 

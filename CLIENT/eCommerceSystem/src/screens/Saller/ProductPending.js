@@ -131,12 +131,14 @@ const ContentComponent = ({
                       height: "100%",
                       justifyContent: "center",
                       alignItems: "center",
-                      // borderWidth: 1,
+                      borderWidth: 1,
+                      borderRadius: 5,
+                      borderColor: "#cecece",
                     }}
                   >
                     {product.images.length > 0 && (
                       <Image
-                        style={{ width: "90%", height: 100 }}
+                        style={{ width: "95%", height: "95%" }}
                         source={{ uri: product.images[0].thumbnail }}
                       />
                     )}

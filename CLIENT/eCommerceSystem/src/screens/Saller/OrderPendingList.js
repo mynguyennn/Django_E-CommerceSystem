@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import axios, { endpoints } from "../../config/API";
 import { useRoute } from "@react-navigation/native";
+import { useRefreshData } from "../../context/RefreshDataContext";
 
 const windownWidth = Dimensions.get("window").width;
 const windownHeight = Dimensions.get("window").height;
@@ -81,6 +82,8 @@ const HeaderComponent = ({ navigation }) => {
 const ContentComponent = ({ navigation, formatPrice }) => {
   const route = useRoute();
   const { storeId } = route.params;
+  const { dispatch } = useRefreshData();
+  const { state: refreshState } = useRefreshData();
 
   //   const storeId = 6;
   const [orders, setOrders] = useState([]);
@@ -91,10 +94,7 @@ const ContentComponent = ({ navigation, formatPrice }) => {
   const handleConfirmButtonClick = async (orderId) => {
     await updateOrderStatus(orderId);
     console.log(orderId);
-    navigation.navigate("OrderPendingList", {
-      refreshData: true,
-      storeId: storeId,
-    });
+    dispatch({ type: "REFRESH_DATA_MENUSTORE" });
   };
   const updateOrderStatus = async (orderId) => {
     try {
@@ -134,7 +134,7 @@ const ContentComponent = ({ navigation, formatPrice }) => {
     };
 
     fetchOrders();
-  }, [route.params?.refreshData]);
+  }, [refreshState]);
 
   //bill item
   const OrderDetailItem = ({ orderDetail }) => (
@@ -587,15 +587,18 @@ const styles = StyleSheet.create({
     // backgroundColor: "red",
   },
   imgProdcut: {
-    height: 80,
-    width: 80,
-    borderWidth: 0.2,
-    borderColor: "gray",
-    borderRadius: 5,
+    height: 90,
+    width: 90,
+    // borderWidth: 0.2,
+    // borderColor: "gray",
+    // borderRadius: 5,
   },
   bgImgProduct: {
     marginRight: 20,
     // borderWidth: 1,
+    borderWidth: 1,
+    borderRadius: 5,
+    borderColor: "#cecece",
     // paddingTop: 10,
     // alignItems: "center",
   },

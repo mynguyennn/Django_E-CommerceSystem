@@ -1,7 +1,7 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const HOST = "http://10.0.2.2:8000/";
+const HOST = "http://10.0.2.2:8000";
 
 export const endpoints = {
   google_login: "/google-login/",
@@ -74,9 +74,15 @@ export const endpoints = {
   get_replys_comments: (id) => `/comments/${id}/get_replys_comments/`,
   get_orders_status_order_status_pay_true: (id) =>
     `/stores/${id}/get_orders_status_order_status_pay_true/`,
-  get_order_count_in_month : '/stores/get_order_count_in_month/',
-  get_order_count_in_year: '/stores/get_order_count_in_year/',
-  get_order_count_in_quarter: '/stores/get_order_count_in_quarter/',
+  compare_product: "/products/compare_product/",
+  get_order_count_in_month: "/stores/get_order_count_in_month/",
+  get_order_count_in_year: "/stores/get_order_count_in_year/",
+  get_order_count_in_quarter: "/stores/get_order_count_in_quarter/",
+  get_product_statusFalse: "/stores/get_product_statusFalse",
+  comfirm_pruduct: (id) => `/products/${id}/comfirm_pruduct/`,
+  get_list_store_stats: "/stores/get_list_store_stats",
+  product_count_in_month: (id) => `/stores/${id}/product_count_in_month/`,
+  product_count_in_quarter: (id) => `/stores/${id}/product_count_in_quarter/`,
 };
 
 const getToken = async () => {

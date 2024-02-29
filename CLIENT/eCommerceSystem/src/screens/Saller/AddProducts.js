@@ -3,6 +3,7 @@ import React, { useContext, useState, useEffect } from "react";
 import { Image, ScrollView, FlatList } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRoute } from "@react-navigation/native";
+import { useRefreshData } from "../../context/RefreshDataContext";
 
 import {
   Dimensions,
@@ -59,6 +60,7 @@ const HeaderComponent = () => {
 };
 
 const ContentComponent = ({ navigation }) => {
+  const { dispatch } = useRefreshData();
   const route = useRoute();
   const { storeData } = route.params;
   const idStore = storeData[0].id;
@@ -154,6 +156,8 @@ const ContentComponent = ({ navigation }) => {
         storeData: storeData,
         refreshData: true,
       });
+
+      dispatch({ type: "REFRESH_DATA" });
 
       console.log("Product created successfully!");
     } catch (error) {

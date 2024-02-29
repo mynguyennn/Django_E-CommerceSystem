@@ -14,7 +14,7 @@ import {
   View,
 } from "react-native";
 import DropDown from "react-native-dropdown-picker";
-import { LoginContext } from "../../../App";
+import { Alert } from "react-native";
 
 const windownWidth = Dimensions.get("window").width;
 const windownHeight = Dimensions.get("window").height;
@@ -97,6 +97,11 @@ const ContentComponent = ({ navigation }) => {
   //register
   const registerUser = async () => {
     try {
+      // thông báo nhập thiếu dữ liệu 
+      if(!fullName || !dateOfBirth  || !address || !email || !phone || !username || !password || !avatar || !selectedGender)
+      {
+        Alert.alert('Thông báo:', 'Vui lòng nhập đầy đủ thông tin!');
+      }
       const filename = avatar.split("/").pop();
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `avatar/${match[1]}` : `avatar`;
@@ -145,6 +150,7 @@ const ContentComponent = ({ navigation }) => {
     const currentDate = selectedDate || date;
     setShow(false);
     setDate(currentDate);
+
     setDateOfBirth(currentDate.toLocaleDateString());
 
     const formattedDateOfBirth = currentDate.toISOString().split("T")[0];

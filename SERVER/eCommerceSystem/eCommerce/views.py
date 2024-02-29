@@ -10,8 +10,8 @@ from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.core import mail
 from django.db import models, transaction
-from django.db.models import Sum, Avg, Q
-from django.http import JsonResponse
+from django.db.models import Sum, Avg, Q, Count
+from django.http import JsonResponse, Http404
 from django.shortcuts import redirect, get_list_or_404
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
@@ -25,7 +25,7 @@ from unidecode import unidecode
 from . import serializers, dao, perms
 from .models import PaymentForm, Follow
 from .models import Product, Category, Account, Image, UserRole, Order, Store, Attribute, PaymentType, ShippingType, \
-    OrderDetail, CommentProduct, ReviewStore, Bill
+    OrderDetail, CommentProduct, Bill
 from .serializers import RoleSerializer, ProductSerializer, CategorySerializer, AccountSerializer, ImageSerializer, \
     AttributeSerializer, OrderSerializer, OrderDetailSerializer, CommentProductSerializer, \
     ProductWithCommentsSerializer, FollowSerializer, StoreSerializer, ProductQuantityUpdateSerializer, \
@@ -101,7 +101,6 @@ class AccountViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIV
 
 # login google
 def generate_random_string(length):
-    """Tạo chuỗi ngẫu nhiên có ký tự và số."""
     characters = string.ascii_letters + string.digits
     return ''.join(random.choice(characters) for _ in range(length))
 
@@ -161,6 +160,7 @@ def google_login(request):
                     return JsonResponse(
                         {'success': True, 'message': 'Account created and logged in', 'user': user_data})
             except Exception as e:
+                print(f"Error processing request: {e}")
                 return JsonResponse({'success': False, 'message': 'Error processing request'})
         return JsonResponse({'success': False, 'message': 'No idToken provided'})
     return JsonResponse({'success': False, 'message': 'Invalid request method'})
@@ -459,39 +459,29 @@ class ProductViewSet(viewsets.ViewSet, generics.ListAPIView):
     def compare_product(self, request):
         id_product_1 = request.query_params.get('id_1')
         id_product_2 = request.query_params.get('id_2')
-        pro_1 = []
-        pro_2 = []
-        try:
-            product_1 = Product.objects.filter(id=id_product_1)
-        except:
-            return Response('Không tìm thấy sản phẩm', status=status.HTTP_400_BAD_REQUEST)
-        try:
-            product_2 = Product.objects.filter(id=id_product_2)
-        except:
-            return Response('Không tìm thấy sản phẩm', status=status.HTTP_400_BAD_REQUEST)
-        # breakpoint()
-        for p_1 in product_1:
-            attribute_data = AttributeSerializer(p_1.attribute.all(), many=True).data
-            pro_1.append({
-                'name_prodcut': p_1.name_product,
-                'price': p_1.price,
-                'description': p_1.description,
-                'product_attributes': attribute_data,
-                'store': p_1.store.name_store
-            })
-            self.calculate_product_variables(pro_1[-1])
+        category_id_1 = None
+        category_id_2 = None
 
-        for p_2 in product_2:
-            attribute_data = AttributeSerializer(p_2.attribute.all(), many=True).data
-            pro_2.append({
-                'name_product': p_2.name_product,
-                'price': p_2.price,
-                'description': p_2.description,
-                'product_attributes': attribute_data,
-                'store': p_2.store.name_store
-            })
-            self.calculate_product_variables(pro_2[-1])
-        return Response({'product_1': pro_1, 'product_2': pro_2}, status=status.HTTP_200_OK)
+        try:
+            product_1 = Product.objects.get(id=id_product_1)
+            category_id_1 = product_1.category.id
+            product_data_1 = ProductSerializer(product_1).data
+            self.quantitySold_avgRating_countCmt(product_data_1)  # Pass serialized data
+        except Product.DoesNotExist:
+            raise Http404("Không tìm thấy sản phẩm 1")
+
+        try:
+            product_2 = Product.objects.get(id=id_product_2)
+            category_id_2 = product_2.category.id
+            product_data_2 = ProductSerializer(product_2).data
+            self.quantitySold_avgRating_countCmt(product_data_2)  # Pass serialized data
+        except Product.DoesNotExist:
+            raise Http404("Không tìm thấy sản phẩm 2")
+
+        if category_id_1 == category_id_2:
+            return Response({'product_1': product_data_1, 'product_2': product_data_2}, status=status.HTTP_200_OK)
+        else:
+            return Response('Sản phẩm không thuộc cùng một danh mục', status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['POST'], detail=False)
     def sort_by_name(self, request):
@@ -566,6 +556,8 @@ class ProductViewSet(viewsets.ViewSet, generics.ListAPIView):
     def add_tag(self, request, pk=None):
         product = self.get_object()
         product.tag = True
+        product.tag_start_date = request.data.get('tag_start_date')
+        product.tag_end_date = request.data.get('tag_end_date')
         product.save()
         serializer = ProductSerializer(product)
         return Response({"product": serializer.data}, status=status.HTTP_200_OK)
@@ -574,9 +566,19 @@ class ProductViewSet(viewsets.ViewSet, generics.ListAPIView):
     def remove_tag(self, request, pk=None):
         product = self.get_object()
         product.tag = False
+        product.tag_start_date = None
+        product.tag_end_date = None
         product.save()
         serializer = ProductSerializer(product)
         return Response({"product": serializer.data}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['GET'])
+    def comfirm_pruduct(self, request, pk=None):
+        product = self.get_object()
+        product.status = True
+        product.save()
+        serializer = ProductSerializer(product)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class AttributeViewSet(viewsets.ViewSet, generics.ListAPIView, generics.DestroyAPIView):
@@ -638,8 +640,7 @@ class OrderViewSet(viewsets.ViewSet, generics.ListAPIView):
         paymentType_id = int(request.data.get('paymentType_id'))
         status_pay = 1 if paymentType_id == 1 else 0
         shippingType_id = int(request.data.get('shippingType_id'))
-        if request.user.is_authenticated and request.user.role_id == 3:
-
+        if request.user.is_authenticated:
             if not shipping_address or not shipping_fee or not note or not paymentType_id or not shippingType_id:
                 return Response({'error': 'Thông tin  không đủ'}, status=status.HTTP_400_BAD_REQUEST)
             try:
@@ -853,6 +854,14 @@ class BillViewSet(viewsets.ViewSet, generics.ListAPIView):
 class StoreViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Store.objects.all()
     serializer_class = serializers.StoreSerializer
+
+    @action(detail=False, methods=['get'])
+    def get_product_statusFalse(self, request):
+        stores = Store.objects.annotate(
+            product_false_count=Count('product', filter=models.Q(product__status=False))
+        ).filter(product_false_count__gt=0)
+        serializer = serializers.ProductFalse_ByStoreSerializer(stores, many=True)
+        return Response(serializer.data)
 
     @action(detail=True, methods=['GET'])
     def list_products_tag(self, request, pk=None):
@@ -1207,6 +1216,7 @@ class StoreViewSet(viewsets.ViewSet, generics.ListAPIView):
 
         return Response({'error': 'Bạn không có quyền thêm sản phẩm.'}, status=status.HTTP_403_FORBIDDEN)
 
+    # stats manager
     @action(detail=False, methods=['Get'], url_path='get_order_count_in_month')
     def get_order_count_month(self, request, *args, **kwargs):
         month = request.query_params.get('month')
@@ -1214,7 +1224,7 @@ class StoreViewSet(viewsets.ViewSet, generics.ListAPIView):
         data = []
         for count in order_counts:
             store_data = {
-                'name_store': count['product__store__name_store'],
+                'name_store': count['name_store'],
                 'order_count': count['order_counts']
             }
             data.append(store_data)
@@ -1227,7 +1237,7 @@ class StoreViewSet(viewsets.ViewSet, generics.ListAPIView):
         data = []
         for count in order_counts:
             store_data = {
-                'name_store': count['product__store__name_store'],
+                'name_store': count['name_store'],
                 'order_count': count['order_counts']
             }
             data.append(store_data)
@@ -1240,12 +1250,13 @@ class StoreViewSet(viewsets.ViewSet, generics.ListAPIView):
         data = []
         for count in order_counts:
             store_data = {
-                'name_store': count['product__store__name_store'],
+                'name_store': count['name_store'],
                 'order_count': count['order_counts']
             }
             data.append(store_data)
         return Response(data, status=status.HTTP_200_OK)
 
+    # stats store
     @action(methods=['GET'], detail=True)
     def product_revenue_in_month(self, request, pk):
         data = []
@@ -1406,6 +1417,37 @@ class StoreViewSet(viewsets.ViewSet, generics.ListAPIView):
         else:
             return Response('Cửa hàng đã được xác nhận', status=status.HTTP_400_BAD_REQUEST)
 
+    @action(methods=['GET'], detail=False)
+    def get_list_store_stats(self, request):
+        store = Store.objects.filter(active=1)
+        store_show = StoreSerializer(store, many=True)
+        return Response(store_show.data, status=status.HTTP_200_OK)
+
+    # stats manager
+    @action(detail=True, methods=['GET'])
+    def product_count_in_month(self, request, pk):
+        store = self.get_object()
+
+        year = request.query_params.get('year', None)
+
+        year = int(year)
+
+        response_data = dao.product_count_statistics_in_month(store, year)
+
+        return Response(response_data)
+
+    @action(detail=True, methods=['GET'])
+    def product_count_in_quarter(self, request, pk):
+        store = self.get_object()
+
+        year = request.query_params.get('year', None)
+
+        year = int(year)
+
+        response_data = dao.product_count_statistics_in_quarter(store, year)
+
+        return Response(response_data)
+
 
 class ShippingView(viewsets.ViewSet, generics.ListAPIView,
                    generics.CreateAPIView, generics.UpdateAPIView,
@@ -1551,9 +1593,10 @@ class CommentView(viewsets.ViewSet, generics.ListAPIView):
         return Response("Bình luận đã được xóa thành công.", status=status.HTTP_204_NO_CONTENT)
 
 
-class ReviewStoreView(viewsets.ViewSet, generics.ListAPIView):
-    queryset = ReviewStore.objects.all()
-    serializer_class = serializers.ReviewStoreSerialzer
+#
+# class ReviewStoreView(viewsets.ViewSet, generics.ListAPIView):
+#     queryset = ReviewStore.objects.all()
+#     serializer_class = serializers.ReviewStoreSerialzer
 
 
 class FollowViewSet(viewsets.ViewSet, generics.ListAPIView):

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useContext } from "react";
 import { View, Text, ScrollView, StyleSheet, Image } from "react-native";
 import axios, { endpoints } from "../../config/API";
-import { LoginContext } from "../../../App";
+import { useLogin } from "../../context/LoginContext";
 
 const BillDetail = ({ route }) => {
-  const [user, dispatch] = useContext(LoginContext);
+  const [user, dispatch] = useLogin();
   const [orders, setOrders] = useState([]);
 
   useEffect(() => {

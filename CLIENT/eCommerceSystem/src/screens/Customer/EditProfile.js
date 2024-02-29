@@ -1,10 +1,9 @@
 import { StatusBar } from "expo-status-bar";
 import React, { useContext, useState, useEffect } from "react";
-import { Image, ScrollView, FlatList } from "react-native";
+import { Image, ScrollView, FlatList, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRoute } from "@react-navigation/native";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { Alert } from "react-native";
 
 import {
   Dimensions,
@@ -17,7 +16,7 @@ import {
 } from "react-native";
 import DropDown from "react-native-dropdown-picker";
 import axios, { endpoints } from "../../config/API";
-import { LoginContext } from "../../../App";
+import { useLogin } from "../../context/LoginContext";
 
 const windownWidth = Dimensions.get("window").width;
 const windownHeight = Dimensions.get("window").height;
@@ -62,7 +61,7 @@ const HeaderComponent = () => {
 };
 
 const ContentComponent = ({ navigation }) => {
-  const [user, dispatch] = useContext(LoginContext);
+  const [user, dispatch] = useLogin();
 
   // console.log("user========>", user);
 
@@ -146,6 +145,11 @@ const ContentComponent = ({ navigation }) => {
   //handle update profile
   const handleUpdateProfile = async () => {
     try {
+      // thông báo nhập thiếu dữ liệu 
+      if(!fullName || !dateOfBirth || !email || !address || !phone || !gender || !avt)
+      {
+        Alert.alert('Thông báo:', 'Vui lòng nhập đầy đủ thông tin!');
+      }
       const filename = avatar.split("/").pop();
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `avatar/${match[1]}` : `avatar`;

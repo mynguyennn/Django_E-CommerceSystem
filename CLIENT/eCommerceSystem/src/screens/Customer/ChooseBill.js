@@ -13,7 +13,7 @@ import {
   View,
 } from "react-native";
 import DropDown from "react-native-dropdown-picker";
-import { LoginContext } from "../../../App";
+import { useLogin } from "../../context/LoginContext";
 
 const windownWidth = Dimensions.get("window").width;
 const windownHeight = Dimensions.get("window").height;
@@ -58,7 +58,7 @@ const HeaderComponent = ({ navigation }) => {
 };
 
 const ContentComponent = ({ navigation }) => {
-  const [user, dispatch] = useContext(LoginContext);
+  const [user, dispatch] = useLogin();
 
   return (
     <View>

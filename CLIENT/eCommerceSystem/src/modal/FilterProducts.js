@@ -4,7 +4,6 @@ import axios, { endpoints } from "../config/API";
 import { AirbnbRating, Rating } from "react-native-ratings";
 import { useRoute } from "@react-navigation/native";
 
-import { LoginContext } from "../../App";
 import {
   Dimensions,
   SafeAreaView,

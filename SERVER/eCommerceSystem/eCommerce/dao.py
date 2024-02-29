@@ -2,10 +2,10 @@
 from datetime import datetime, timedelta
 
 from django.db.models import Count, Sum, F, FloatField, ExpressionWrapper
+from django.db.models.functions import ExtractMonth
 
-from .models import Account, UserRole, Product, OrderDetail, Order
-from itertools import groupby
-from operator import itemgetter
+from .models import Account, UserRole, Product, OrderDetail
+from .serializers import ProductSerializer
 
 
 def load_account(params={}):
@@ -33,12 +33,13 @@ def get_order_count_in_month(month):
     if month:
         current_year = datetime.now().year
         filters['order__created_at__year'] = current_year
-        filters['order__created_at__month'] = month
-        filters['order__status_pay'] = 1
-        # district giúp chỉ đếm order mà k đếm từng orderdetail
-        order_count_by_store = OrderDetail.objects.values('product__store__name_store').annotate(
-            order_counts=Count('order', distinct=True))
-    return order_count_by_store
+        filters['order__created_at__quarter'] = month
+        order_counts = OrderDetail.objects.filter(**filters).values('product__store__name_store').annotate(
+            order_counts=Count('order')
+        ).annotate(
+            name_store=F('product__store__name_store')
+        ).values('name_store', 'order_counts')
+    return order_counts
 
 
 def get_order_count_in_year(year):
@@ -46,10 +47,12 @@ def get_order_count_in_year(year):
     order_counts = None
     if year:
         filters['order__created_at__year'] = year
-        filters['order__status_pay'] = 1
-        order_count_by_store = OrderDetail.objects.values('product__store__name_store').annotate(
-            order_counts=Count('order', distinct=True))
-        return order_count_by_store
+        order_counts = OrderDetail.objects.filter(**filters).values('product__store__name_store').annotate(
+            order_counts=Count('order')
+        ).annotate(
+            name_store=F('product__store__name_store')
+        ).values('name_store', 'order_counts')
+    return order_counts
 
 
 def get_order_count_in_quarter(quarter):
@@ -58,11 +61,14 @@ def get_order_count_in_quarter(quarter):
     if quarter:
         current_year = datetime.now().year
         filters['order__created_at__year'] = current_year
-        filters['order__status_pay'] = 1
         filters['order__created_at__quarter'] = quarter
-        order_count_by_store = OrderDetail.objects.values('product__store__name_store').annotate(
-            order_counts=Count('order', distinct=True))
-        return order_count_by_store
+        order_counts = OrderDetail.objects.filter(**filters).values('product__store__name_store').annotate(
+            order_counts=Count('order')
+        ).annotate(
+            name_store=F('product__store__name_store')
+        ).values('name_store', 'order_counts')
+
+    return order_counts
 
 
 def get_count_quantity_product_in_order_by_month(month):
@@ -107,6 +113,9 @@ def get_count_quantity_product_in_order_by_quarter(quarter):
             name_store=F('product__store__name_store')
         ).values('name_store', 'counts_quantity')
     return counts_quantity
+
+
+##=================================================##
 
 
 def product_revenue_statistics_in_month(store_id, product_id, year):
@@ -355,3 +364,76 @@ def category_revenue_statistics_in_quarter(store_id, year, category_id):
         data.extend(quarterly_data)
 
     return data
+
+
+##=================================================##
+
+
+def product_count_statistics_in_month(store, year):
+    monthly_stats = (
+        Product.objects
+        .annotate(month=ExtractMonth('created_at'))
+        .filter(created_at__year=year, store=store)
+        .values('month')
+        .annotate(
+            total_products=Count('id'),
+        )
+    )
+
+    all_months_stats = [
+        {
+            'month': month,
+            'total_products': 0,
+            'product_info': []
+        } for month in range(1, 13)
+    ]
+
+    total_products_all_months = 0
+
+    for stats in monthly_stats:
+        month = stats['month']
+        products = Product.objects.filter(created_at__year=year, created_at__month=month, store=store)
+        product_info = ProductSerializer(products, many=True).data
+
+        total_products_all_months += stats['total_products']
+
+        all_months_stats[month - 1].update({
+            'total_products': stats['total_products'],
+            'product_info': product_info,
+        })
+
+    return {
+        'total_products_all_months': total_products_all_months,
+        'monthly_stats': all_months_stats,
+    }
+
+def product_count_statistics_in_quarter(store, year):
+    quarterly_stats = []
+    total_products_all_quarters = 0
+
+    for quarter in range(1, 5):
+        start_date = datetime(year, (quarter - 1) * 3 + 1, 1)
+        end_date = start_date.replace(month=start_date.month + 2) + timedelta(days=30)
+
+        products = Product.objects.filter(
+            created_at__year=year,
+            created_at__month__in=[(quarter - 1) * 3 + 1, (quarter - 1) * 3 + 2, (quarter - 1) * 3 + 3],
+            store=store
+        )
+
+        product_info = ProductSerializer(products, many=True).data
+
+        total_products = products.count()
+
+        total_products_all_quarters += total_products
+
+        quarterly_stats.append({
+            'quarter': quarter,
+            'total_products': total_products,
+            'product_info': product_info,
+        })
+
+    return {
+        'total_products_all_quarters': total_products_all_quarters,
+        'quarterly_stats': quarterly_stats,
+    }

@@ -56,7 +56,9 @@ const HeaderComponent = () => {
             ></Image>
           </TouchableOpacity>
           <TouchableOpacity>
-            <Text style={styles.textSignIn}>Thống kê doanh thu các cửa hàng</Text>
+            <Text style={styles.textSignIn}>
+              Thống kê doanh thu các cửa hàng
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -94,11 +96,11 @@ const ContentComponent = ({ navigation }) => {
   const handleYearChange = (year) => {
     setSelectedYear(year);
   };
-  
+
   const handleMonthChange = (month) => {
     setSelectedMonth(month);
     // console.log(month);
-  }
+  };
   const handleQuarterChange = (quarter) => {
     setSelectedQuarter(quarter);
   };
@@ -174,15 +176,12 @@ const ContentComponent = ({ navigation }) => {
       //year
       try {
         if (selectedYear) {
-          const response = await axios.get(
-            endpoints.get_order_count_in_year,
-            {
-              params: {
-                // category_id: categoryId,
-                year: selectedYear,
-              },
-            }
-          );
+          const response = await axios.get(endpoints.get_order_count_in_year, {
+            params: {
+              // category_id: categoryId,
+              year: selectedYear,
+            },
+          });
           setStoreStatsYears(response.data);
           // console.log("========", response.data);
         }
@@ -197,15 +196,12 @@ const ContentComponent = ({ navigation }) => {
       //month
       try {
         if (selectedMonth) {
-          const response = await axios.get(
-            endpoints.get_order_count_in_month,
-            {
-              params: {
-                // category_id: categoryId,
-                month: selectedMonth,
-              },
-            }
-          );
+          const response = await axios.get(endpoints.get_order_count_in_month, {
+            params: {
+              // category_id: categoryId,
+              month: selectedMonth,
+            },
+          });
           setStoreStatsMonth(response.data);
           console.log("========", response.data);
         }
@@ -273,8 +269,6 @@ const ContentComponent = ({ navigation }) => {
         </View>
 
         <View style={styles.customBarChartStyle}>
-
-
           {/* year */}
           <Text
             style={{
@@ -316,11 +310,17 @@ const ContentComponent = ({ navigation }) => {
               lineConfig={lineConfig}
             />
           )}
-         </View>
-
+        </View>
 
         <View>
-          <Text style={{ color: "black", fontWeight: "500", fontSize: 14, marginTop: 25 }}>
+          <Text
+            style={{
+              color: "black",
+              fontWeight: "500",
+              fontSize: 14,
+              marginTop: 25,
+            }}
+          >
             Chọn tháng:
           </Text>
           <View style={styles.pickerContainer}>
@@ -335,11 +335,11 @@ const ContentComponent = ({ navigation }) => {
               ))}
             </Picker>
           </View>
-        </View> 
+        </View>
 
         <View style={styles.customBarChartStyle}>
-           {/* month */}
-           <Text
+          {/* month */}
+          <Text
             style={{
               color: "black",
               fontWeight: "500",
@@ -378,11 +378,18 @@ const ContentComponent = ({ navigation }) => {
               showLine
               lineConfig={lineConfig}
             />
-          )}  
-       </View>  
-      
-       <View>
-          <Text style={{ color: "black", fontWeight: "500", fontSize: 14, marginTop: 25 }}>
+          )}
+        </View>
+
+        <View>
+          <Text
+            style={{
+              color: "black",
+              fontWeight: "500",
+              fontSize: 14,
+              marginTop: 25,
+            }}
+          >
             Chọn quý:
           </Text>
           <View style={styles.pickerContainer}>
@@ -397,11 +404,11 @@ const ContentComponent = ({ navigation }) => {
               ))}
             </Picker>
           </View>
-        </View> 
+        </View>
 
-       <View style={styles.customBarChartStyle}>
-           {/* quarter */}
-           <Text
+        <View style={styles.customBarChartStyle}>
+          {/* quarter */}
+          <Text
             style={{
               color: "black",
               fontWeight: "500",
@@ -440,8 +447,8 @@ const ContentComponent = ({ navigation }) => {
               showLine
               lineConfig={lineConfig}
             />
-          )}  
-       </View>  
+          )}
+        </View>
       </ScrollView>
     </View>
   );

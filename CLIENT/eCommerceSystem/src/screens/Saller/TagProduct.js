@@ -5,6 +5,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useRoute } from "@react-navigation/native";
 import * as Animatable from "react-native-animatable";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import moment from "moment-timezone";
 
 import {
   Dimensions,
@@ -20,7 +21,6 @@ import {
 import DropDown from "react-native-dropdown-picker";
 import axios, { endpoints } from "../../config/API";
 
-// import { LoginContext } from "../../../App";
 
 const windownWidth = Dimensions.get("window").width;
 const windownHeight = Dimensions.get("window").height;
@@ -68,16 +68,16 @@ const ContentComponent = ({ navigation }) => {
   const route = useRoute();
   const { storeId, totalRevenue } = route.params;
   // const storeId = 20;
+  const today = new Date();
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalVisible, setModalVisible] = useState(false);
 
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
-  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [isAddingTag, setIsAddingTag] = useState(false);
-
+  const [showModal, setShowModal] = useState(false);
   //call api product
   const fetchData = async () => {
     try {
@@ -99,30 +99,38 @@ const ContentComponent = ({ navigation }) => {
   };
 
   //show startDate - endDate
-  const showStartDatePickers = () => {
-    setShowStartDatePicker(true);
-  };
 
   const showEndDatePickers = () => {
-    setShowEndDatePicker(true);
-  };
-
-  const handleStartDateChange = (event, selectedDate) => {
-    const currentDate = selectedDate || startDate;
-    setShowStartDatePicker(Platform.OS === "ios");
-    setStartDate(currentDate);
+    setShowModal(true);
   };
 
   const handleEndDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || endDate;
     setShowEndDatePicker(Platform.OS === "ios");
+    setShowModal(false);
     setEndDate(currentDate);
   };
 
   //save tag
   const handleSaveTag = async () => {
     try {
-      const response = await axios.post(endpoints.add_tag(selectedProduct));
+      const formData = new FormData();
+
+      formData.append("tag_start_date", startDate.toISOString().split(".")[0]);
+      formData.append("tag_end_date", endDate.toISOString().split(".")[0]);
+
+      console.log(startDate, endDate);
+
+      const response = await axios.post(
+        endpoints.add_tag(selectedProduct),
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
       console.log("Tag add:", response.data);
       fetchData();
       setModalVisible(false);
@@ -163,7 +171,11 @@ const ContentComponent = ({ navigation }) => {
     );
   };
 
-  // console.log(selectedProduct);
+  //kiem tra data
+  const isTagExpired = (tagEndDate) => {
+    const currentDate = new Date();
+    return currentDate > new Date(tagEndDate);
+  };
 
   //format price
   const formatPrice = (price) => {
@@ -187,11 +199,13 @@ const ContentComponent = ({ navigation }) => {
                       height: "100%",
                       justifyContent: "center",
                       alignItems: "center",
-                      // borderWidth: 1,
+                      borderWidth: 1,
+                      borderRadius: 5,
+                      borderColor: "#cecece",
                     }}
                   >
                     <Image
-                      style={{ width: "90%", height: 100 }}
+                      style={{ width: "95%", height: "95%" }}
                       source={{ uri: product.images[0].thumbnail }}
                     />
 
@@ -214,7 +228,7 @@ const ContentComponent = ({ navigation }) => {
                             source={require("../../images/hot1.png")}
                             style={[
                               styles.newTag,
-                              { transform: [{ rotate: "40deg" }] },
+                              { transform: [{ rotate: "33deg" }] },
                             ]}
                           ></Image>
                         </Animatable.View>
@@ -233,13 +247,13 @@ const ContentComponent = ({ navigation }) => {
                         >
                           <View
                             style={{
-                              backgroundColor: "white",
+                              backgroundColor: "#f3f3f3",
                               padding: 10,
                               borderRadius: 10,
-                              width: "85%",
+                              width: "80%",
                               borderColor: "#bbbbbb",
-                              borderWidth: 1,
-                              height: "30%",
+                              // borderWidth: 1,
+                              height: "26%",
                             }}
                           >
                             <View
@@ -253,7 +267,7 @@ const ContentComponent = ({ navigation }) => {
                             >
                               <Text
                                 style={{
-                                  fontSize: 18,
+                                  fontSize: 17,
                                   fontWeight: "bold",
                                   // marginBottom: 10,
                                   marginRight: 10,
@@ -274,29 +288,24 @@ const ContentComponent = ({ navigation }) => {
                             <View>
                               <View
                                 style={{
-                                  padding: 10,
                                   paddingLeft: 20,
+                                  // padding: 6,
                                   // paddingRight: 10,
                                 }}
                               >
-                                <TouchableOpacity
-                                  onPress={showStartDatePickers}
+                                <Text
+                                  style={{
+                                    fontSize: 14,
+                                    // color: "white",
+                                    // backgroundColor: "#ee4d2d",
+                                    // padding: 10,
+                                    // borderRadius: 5,
+                                    // width: 250,
+                                    // textAlign: "center",
+                                  }}
                                 >
-                                  <Text style={{ fontSize: 15 }}>
-                                    Chọn ngày bắt đầu:{" "}
-                                    {startDate.toLocaleDateString()}
-                                  </Text>
-                                </TouchableOpacity>
-                                {showStartDatePicker && (
-                                  <DateTimePicker
-                                    testID="dateTimePicker"
-                                    value={startDate}
-                                    mode="date"
-                                    is24Hour={true}
-                                    display="default"
-                                    onChange={handleStartDateChange}
-                                  />
-                                )}
+                                  Ngày hôm nay: {today.toLocaleDateString()}
+                                </Text>
                               </View>
 
                               <View
@@ -307,21 +316,11 @@ const ContentComponent = ({ navigation }) => {
                                 }}
                               >
                                 <TouchableOpacity onPress={showEndDatePickers}>
-                                  <Text style={{ fontSize: 15 }}>
+                                  <Text style={{ fontSize: 14 }}>
                                     Chọn ngày kết thúc:{" "}
                                     {endDate.toLocaleDateString()}
                                   </Text>
                                 </TouchableOpacity>
-                                {showEndDatePicker && (
-                                  <DateTimePicker
-                                    testID="dateTimePicker"
-                                    value={endDate}
-                                    mode="date"
-                                    is24Hour={true}
-                                    display="default"
-                                    onChange={handleEndDateChange}
-                                  />
-                                )}
                               </View>
                             </View>
 
@@ -329,7 +328,7 @@ const ContentComponent = ({ navigation }) => {
                               style={{
                                 flexDirection: "row",
                                 justifyContent: "space-around",
-                                marginTop: 20,
+                                marginTop: 15,
                               }}
                             >
                               <TouchableOpacity
@@ -388,10 +387,18 @@ const ContentComponent = ({ navigation }) => {
                       {formatPrice(product.price)}
                     </Text>
                     <Text style={styles.priceProductSold}>
-                      Đã bán: {product.quantity_sold}
+                      Bắt đầu:{" "}
+                      {product.tag_start_date &&
+                        `${new Date(product.tag_start_date).toLocaleDateString(
+                          "vi-VN"
+                        )}`}
                     </Text>
                     <Text style={styles.priceProductSold}>
-                      Tồn kho: {product.quantity}
+                      Kết thúc:{" "}
+                      {product.tag_end_date &&
+                        `${new Date(product.tag_end_date).toLocaleDateString(
+                          "vi-VN"
+                        )}`}
                     </Text>
                   </View>
 
@@ -428,6 +435,17 @@ const ContentComponent = ({ navigation }) => {
             })
           ) : (
             <Text>Không tìm thấy sản phẩm nào!</Text>
+          )}
+
+          {showModal && (
+            <DateTimePicker
+              testID="dateTimePicker"
+              value={endDate}
+              mode="date"
+              is24Hour={true}
+              display="default"
+              onChange={handleEndDateChange}
+            />
           )}
         </View>
       </View>

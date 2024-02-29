@@ -7,10 +7,12 @@ import React, {
 } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Home from "./Home";
-import Notification from "./Notification";
+import CompareProduct from "./CompareProduct";
 import Cart from "./Cart";
 import Profile from "./Profile";
 import { View, Text, SafeAreaView, Image } from "react-native";
+import { useCart } from "../../context/CartContext";
+import { useProductContext } from "../../context/CompareProductContext";
 
 const Tab = createBottomTabNavigator();
 
@@ -48,9 +50,9 @@ const MyTabs = () => {
         default: require("../../images/cartt.png"),
         selected: require("../../images/cart1.png"),
       },
-      Notification: {
-        default: require("../../images/noti1.png"),
-        selected: require("../../images/noti.png"),
+      CompareProduct: {
+        default: require("../../images/id1.png"),
+        selected: require("../../images/id2.png"),
       },
       Profile: {
         default: require("../../images/user.png"),
@@ -65,11 +67,66 @@ const MyTabs = () => {
 
     const cartStyle = route.name === "Cart" ? styles.cartIcon : null;
 
+    const [{ cartItems }, dispatchCart] = useCart();
+    const itemCount = cartItems.length;
+    const { state } = useProductContext();
+    const { productCount } = state;
     return (
-      <Image
-        source={imageSource}
-        style={{ width: size, height: size, tintColor: color, ...cartStyle }}
-      />
+      <View>
+        <Image
+          source={imageSource}
+          style={{ width: size, height: size, tintColor: color, ...cartStyle }}
+        />
+        {route.name === "Cart" && (
+          <Text
+            style={{
+              position: "absolute",
+              top: -5,
+              right: -5,
+              color: "white",
+              paddingTop: 2,
+              paddingBottom: 1,
+              paddingLeft: 6,
+              paddingRight: 6,
+              borderRadius: 100,
+              backgroundColor: "#c20302",
+              fontSize: 12,
+              borderWidth: 1,
+              borderColor: "white",
+              textAlign: "center",
+              alignItems: "center",
+              fontWeight: "500",
+            }}
+          >
+            {itemCount}
+          </Text>
+        )}
+
+        {route.name === "CompareProduct" && (
+          <Text
+            style={{
+              position: "absolute",
+              top: -7,
+              right: -8,
+              color: "white",
+              paddingTop: 2,
+              paddingBottom: 1,
+              paddingLeft: 6,
+              paddingRight: 6,
+              borderRadius: 100,
+              backgroundColor: "#c20302",
+              fontSize: 12,
+              borderWidth: 1,
+              borderColor: "white",
+              textAlign: "center",
+              alignItems: "center",
+              fontWeight: "500",
+            }}
+          >
+            {productCount}
+          </Text>
+        )}
+      </View>
     );
   };
 
@@ -105,14 +162,14 @@ const MyTabs = () => {
         }}
       />
       <Tab.Screen
-        name="Notification"
-        component={Notification}
+        name="CompareProduct"
+        component={CompareProduct}
         options={{
-          tabBarLabel: "Thông báo",
+          tabBarLabel: "So sánh",
         }}
         listeners={{
           tabPress: () => {
-            setSelectedTab("Notification");
+            setSelectedTab("CompareProduct");
           },
         }}
       />

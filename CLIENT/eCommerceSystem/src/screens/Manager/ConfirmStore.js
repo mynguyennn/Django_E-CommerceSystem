@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import React, { useContext, useState, useEffect } from "react";
-import { Image, ScrollView, FlatList } from "react-native";
+import { Image, ScrollView, FlatList, Modal } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import axios, { endpoints } from "../../config/API";
 import {
@@ -18,7 +18,7 @@ import { useRoute } from "@react-navigation/native";
 const windownWidth = Dimensions.get("window").width;
 const windownHeight = Dimensions.get("window").height;
 
-export default StoreListConfirm = ({ navigation }) => {
+export default ConfirmStore = ({ navigation }) => {
   // const [countStore, setCountStore] = useState(0);
   const [stores, setStores] = useState([]);
   const route = useRoute();
@@ -35,7 +35,7 @@ export default StoreListConfirm = ({ navigation }) => {
           navigation={navigation}
           storess={stores}
           setStores={setStores}
-        // storeId={storeId}
+          // storeId={storeId}
         />
       </View>
 
@@ -58,9 +58,7 @@ const HeaderComponent = ({ navigation }) => {
             ></Image>
           </TouchableOpacity>
           <TouchableOpacity>
-            <Text style={styles.textSignIn}>
-              Danh sách cửa hàng cần xác nhận
-            </Text>
+            <Text style={styles.textSignIn}>Danh sách cửa hàng</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -76,24 +74,14 @@ const ContentComponent = ({
   setCountProduct,
 }) => {
   const [storeList, setStoreList] = useState([]);
-
-  //call api 
+  const [selectedStore, setSelectedStore] = useState(null);
+  const [isModel, setIsModal] = useState(false);
+  //call api
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get(
-          endpoints.get_store_to_confirm
-        );
+        const response = await axios.get(endpoints.get_store_to_confirm);
         setStoreList(response.data);
-        const numberOfStores = response.data.length;
-
-        // setCountStore((count) => {
-        //   if (count !== numberOfStores) {
-        //     return numberOfStores;
-        //   }
-        //   return count;
-        // });
-        // console.log("========", response.data);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -102,18 +90,23 @@ const ContentComponent = ({
     fetchData();
   }, []);
 
-  const Confirm = async(storeId) =>{
-    // console.log(storeId);
-      try{
-        const response = await axios.get(
-          endpoints.confirm_store(storeId)
-        );
+  const Confirm = async (storeId) => {
+    try {
+      await axios.get(endpoints.confirm_store(storeId));
 
-      }
-      catch(error){
-        console.log(error);
-      }
-  }
+      const response = await axios.get(endpoints.get_store_to_confirm);
+      setStoreList(response.data);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsModal(false);
+    }
+  };
+
+  const openConfirmationModal = (store) => {
+    setSelectedStore(store);
+    setIsModal(true);
+  };
   return (
     <ScrollView>
       <View style={styles.containerContent}>
@@ -121,41 +114,50 @@ const ContentComponent = ({
           {storeList && storeList.length > 0 ? (
             storeList.map((store) => {
               return (
-                <View key={store.id} style={styles.productContainer}>
-                  <TouchableOpacity
+                <TouchableOpacity
+                  key={store.id}
+                  style={styles.productContainer}
+                  onPress={() => openConfirmationModal(store)}
+                >
+                  <View
                     style={{
-                      width: "30%",
+                      width: "25%",
                       height: "100%",
                       justifyContent: "center",
                       alignItems: "center",
-                      // borderWidth: 1,
+                      borderWidth: 1,
+                      borderRadius: 5,
+                      borderColor: "#cecece",
                     }}
                   >
                     <Image
-                      style={{ width: "90%", height: 100 }}
+                      style={{ width: "80%", height: "80%" }}
                       source={
                         store.avt
                           ? { uri: store.avt }
                           : require("../../images/chualogin.png")
                       }
                     />
-                  </TouchableOpacity>
+                  </View>
                   <View
                     style={{
                       flexDirection: "column",
-                      width: "50%",
+                      width: "71%",
                       // borderWidth: 1,
-                      marginLeft: 5,
+                      marginLeft: 15,
                       height: "100%",
                       // justifyContent: "center",
                       // alignItems: "center",
                     }}
                   >
                     <Text style={styles.nameProduct}>
-                      {store.name_store}
+                      Tên cửa hàng: {store.name_store}
                     </Text>
                     <Text style={styles.nameProduct}>
-                      {store.address}
+                      Địa chỉ: {store.address}
+                    </Text>
+                    <Text style={styles.nameProduct1}>
+                      Trạng thái: Chưa xác nhận
                     </Text>
                   </View>
                   <View
@@ -164,29 +166,16 @@ const ContentComponent = ({
                       width: "20%",
                       justifyContent: "center",
                       alignItems: "center",
-                      // marginLeft: 200,
-                      // borderWidth: 1,
-                      // marginRight: 10,
-                      // marginLeft: 5,
                     }}
                   >
-                    <TouchableOpacity
+                    {/* <TouchableOpacity
                       style={styles.btnUpdate}
-                      // onPress={() => {
-                      //     // productId: product.product.id,
-                      //     // storeName: store.name_store,
-                      //     // productImage: product.product.images[0].thumbnail,
-                      //     storeId: store.id,
-                        
-                      // }}
                       onPress={() => Confirm(store.id)}
                     >
                       <Text style={{ color: "white" }}>Xác Nhận</Text>
-                    </TouchableOpacity>
-                    
-
+                    </TouchableOpacity> */}
                   </View>
-                </View>
+                </TouchableOpacity>
               );
             })
           ) : (
@@ -194,6 +183,31 @@ const ContentComponent = ({
           )}
         </View>
       </View>
+
+      {/* Modal */}
+      <Modal visible={isModel} animationType="slide" transparent={true}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalText}>
+              Xác nhận cửa hàng? [{selectedStore?.name_store}]
+            </Text>
+            <TouchableOpacity
+              style={styles.modalButtonConfirm}
+              onPress={() => Confirm(selectedStore?.id)}
+            >
+              <Text style={{ color: "white", fontWeight: "500" }}>
+                Xác Nhận
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalButtonCancel}
+              onPress={() => setIsModal(false)}
+            >
+              <Text style={{ color: "white", fontWeight: "500" }}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -201,7 +215,6 @@ const ContentComponent = ({
 const FooterComponent = ({ navigation, storeData }) => {
   return;
 };
-
 
 const styles = StyleSheet.create({
   viewContainer: {
@@ -319,7 +332,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     // justifyContent:'center',
     borderColor: "gray",
-    height: 110,
+    height: 100,
     width: "100%",
     backgroundColor: "white",
     position: "relative",
@@ -330,9 +343,20 @@ const styles = StyleSheet.create({
   },
   nameProduct: {
     color: "#444444",
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: "500",
     width: "95%",
+    // padding: 10,
+    paddingBottom: 9,
+    // marginTop: 15,
+  },
+  nameProduct1: {
+    color: "#dd3232",
+    fontSize: 12.5,
+    fontWeight: "500",
+    width: "90%",
+    position: "absolute",
+    bottom: 0,
     // padding: 10,
     // paddingBottom: 15,
     // marginTop: 15,
@@ -379,5 +403,41 @@ const styles = StyleSheet.create({
     // position: "absolute",
     // bottom: 8,
     // right: 10,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
+  modalContent: {
+    width: "80%",
+    paddingBottom: 20,
+    paddingTop: 20,
+    backgroundColor: "#f8f8f8",
+    borderWidth: 1,
+    borderRadius: 10,
+    borderColor: "#d4d4d4",
+    alignItems: "center",
+  },
+  modalText: {
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  modalButtonConfirm: {
+    backgroundColor: "green",
+    padding: 10,
+    width: 150,
+    borderRadius: 5,
+    alignItems: "center",
+    marginBottom: 10,
+    // borderWidth: 1,
+  },
+  modalButtonCancel: {
+    backgroundColor: "#ce2222",
+    width: 150,
+    padding: 10,
+    borderRadius: 5,
+    alignItems: "center",
   },
 });

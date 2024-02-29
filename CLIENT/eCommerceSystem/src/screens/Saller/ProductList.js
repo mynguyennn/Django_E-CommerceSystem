@@ -13,14 +13,14 @@ import {
   View,
 } from "react-native";
 import DropDown from "react-native-dropdown-picker";
-import { LoginContext } from "../../../App";
+import { useLogin } from "../../context/LoginContext";
 import { useRoute } from "@react-navigation/native";
 
 const windownWidth = Dimensions.get("window").width;
 const windownHeight = Dimensions.get("window").height;
 
 export default ProductList = ({ navigation }) => {
-  const [user, dispatch] = useContext(LoginContext);
+  const [user, dispatch] = useLogin();
   const [countProduct, setCountProduct] = useState(0);
   const [products, setProducts] = useState([]);
   const route = useRoute();
@@ -138,21 +138,20 @@ const ContentComponent = ({
               return (
                 <View key={product.product.id} style={styles.productContainer}>
                   <TouchableOpacity
-                    onPress={() => handleUpdateProduct(product.product.id)}
                     style={{
                       width: "30%",
                       height: "100%",
                       justifyContent: "center",
                       alignItems: "center",
-                      // borderWidth: 1,
+                      borderWidth: 1,
+                      borderRadius: 5,
+                      borderColor: "#cecece",
                     }}
                   >
-                    {/* {product.images && product.images.length > 0 && ( */}
                     <Image
-                      style={{ width: "90%", height: 100 }}
+                      style={{ width: "95%", height: "95%" }}
                       source={{ uri: product.product.images[0].thumbnail }}
                     />
-                    {/* )} */}
                   </TouchableOpacity>
 
                   <View

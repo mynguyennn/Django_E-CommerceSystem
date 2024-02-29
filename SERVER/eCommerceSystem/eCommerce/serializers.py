@@ -4,7 +4,7 @@ from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
 from .models import Image, Product, Category, Attribute, Store, Account, UserRole, Order, PaymentType, ShippingType, \
-    OrderDetail, CommentProduct, ReviewStore, Bill, Follow
+    OrderDetail, CommentProduct, Bill, Follow
 
 
 class RoleSerializer(ModelSerializer):
@@ -84,10 +84,26 @@ class StoreSerializer(ModelSerializer):
         return representation
 
 
+
+class ProductFalse_ByStoreSerializer(serializers.ModelSerializer):
+    product_false_count = serializers.IntegerField()
+
+    class Meta:
+        model = Store
+        fields = ['id', 'name_store', 'address', 'active', 'account', 'avt', 'product_false_count']
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+
+        if representation.get('avt'):
+            representation['avt'] = "https://res.cloudinary.com/diyeuzxqt/" + representation['avt']
+
+        return representation
+
 class CategoryListSerializer(ModelSerializer):
     class Meta:
         model = Category
-        fields = ["name_category"]
+        fields = ['id', "name_category"]
 
 
 class AttributeSerializer(ModelSerializer):
@@ -122,7 +138,7 @@ class ProductSerializer(ModelSerializer):
     class Meta:
         model = Product
         fields = ["id", "name_product", "price", "description", "status", "quantity", "store_info", "category_info",
-                  'product_attributes', 'images', 'tag']
+                  'product_attributes', 'images', 'tag', 'tag_start_date', 'tag_end_date']
 
 
 class ProductQuantityUpdateSerializer(serializers.Serializer):
@@ -190,8 +206,8 @@ class CommentProductByUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CommentProduct
-        fields = ['id', 'account_info', 'rating', 'content', 'reply_idComment', 'orderDetail', 'created_at', 'product_info']
-
+        fields = ['id', 'account_info', 'rating', 'content', 'reply_idComment', 'orderDetail', 'created_at',
+                  'product_info']
 
 
 class ProductWithCommentsSerializer(serializers.ModelSerializer):
@@ -206,8 +222,7 @@ class ProductWithCommentsSerializer(serializers.ModelSerializer):
         fields = ['id', 'name_product', 'price', 'description', 'product_attributes', 'status', 'quantity',
                   'store_info', 'category_info', 'images', 'comments']
 
-
-class ReviewStoreSerialzer(serializers.ModelSerializer):
-    class Meta:
-        model = ReviewStore
-        fields = '__all__'
+# class ReviewStoreSerialzer(serializers.ModelSerializer):
+#     class Meta:
+#         model = ReviewStore
+#         fields = '__all__'

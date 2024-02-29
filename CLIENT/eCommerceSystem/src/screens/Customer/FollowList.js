@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import DropDown from "react-native-dropdown-picker";
 import axios, { endpoints } from "../../config/API";
-import { LoginContext } from "../../../App";
+import { useLogin } from "../../context/LoginContext";
 
 const windownWidth = Dimensions.get("window").width;
 const windownHeight = Dimensions.get("window").height;
@@ -72,7 +72,7 @@ const ContentComponent = ({
   followedStores,
   setFollowedStores,
 }) => {
-  const [user, dispatch] = useContext(LoginContext);
+  const [user, dispatch] = useLogin();
 
   useEffect(() => {
     getFollowedStores();

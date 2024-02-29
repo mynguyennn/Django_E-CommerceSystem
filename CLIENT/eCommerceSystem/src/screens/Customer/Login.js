@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { LoginContext } from "../../../App";
+import { useLogin } from "../../context/LoginContext";
 import "expo-dev-client";
 import {
   GoogleSignin,
@@ -27,6 +27,7 @@ import { firebaseConfig } from "../../config/configFireBase";
 import { LoginManager, AccessToken } from "react-native-fbsdk-next";
 import axios, { endpoints } from "../../config/API";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Alert } from "react-native";
 
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
@@ -95,11 +96,16 @@ const ContentComponent = ({ navigation }) => {
     setPassHidden(!passHidden);
   };
 
-  const [user, dispatch] = useContext(LoginContext);
+  const [user, dispatch] = useLogin();
 
   //login
   const handleLogin = async () => {
     try {
+      // thông báo nhập thiếu dữ liệu 
+     if(!username  || !password)
+     {
+      Alert.alert('Thông báo:', 'Vui nhập đầy đủ thông tin!');
+     }
       const response = await axios.post(
         "http://10.0.2.2:8000/o/token/",
         `grant_type=password&username=${username}&password=${password}&client_id=dMlVgp3i59e91nDEGZ0Kq6D7uLX6MKLq3RL68eoT&client_secret=hA095gEXYFSqRCnt2fN2qgzWRL7M6Xpay3Bjd8ddQLVc7LhQzH7mYibKpOrMR7soZhthIaWsKf6rxBHDWohV5ePKNIMFmQQT9gEgS3Dt3ngvlv6zftrKtwk8usb5wFLH`,
@@ -123,12 +129,10 @@ const ContentComponent = ({ navigation }) => {
       });
       // console.log(accessToken);
       await AsyncStorage.setItem("accessToken", accessToken);
-      if(userInfoResponse.data.role == 2 || userInfoResponse.data.role ==3)
-      {
+
+      if (userInfoResponse.data.role == 2 || userInfoResponse.data.role == 3) {
         navigation.navigate("HomeTabs");
-      }
-      else
-        navigation.navigate("ManagerHome");
+      } else navigation.navigate("MenuManager");
     } catch (error) {
       console.error("Đăng nhập thất bại:", error);
       console.log("Error details:", error.response.data);
@@ -203,7 +207,7 @@ const ContentComponent = ({ navigation }) => {
 };
 
 const FooterComponent = ({ navigation }) => {
-  const [users, dispatch] = useContext(LoginContext);
+  const [users, dispatch] = useLogin();
 
   //login google
   const [initializingGoogle, setInitializingGoogle] = useState(true);
@@ -230,13 +234,6 @@ const FooterComponent = ({ navigation }) => {
       const { displayName, email } = userSignIn._tokenResponse;
       const photoURL = userSignIn._tokenResponse?.photoUrl;
       const uid = userSignIn.user.uid;
-
-      console.log("Received data:");
-      console.log("idToken:", idToken);
-      console.log("displayName:", displayName);
-      console.log("email:", email);
-      console.log("uid:", uid);
-      console.log("photoURL:", photoURL);
 
       await sendGoogleIdTokenToServer({
         idToken,
@@ -270,15 +267,21 @@ const FooterComponent = ({ navigation }) => {
           "Content-Type": "multipart/form-data",
         },
       });
-      // console.log("Server Response:", response.data);
-      const result = response.data;
 
-      console.log("User Google:", result.user);
+      console.log("Received data---:");
+      console.log("idToken---:", idToken);
+      console.log("displayName---:", displayName);
+      console.log("email---:", email);
+      console.log("uid---:", uid);
+      console.log("photoURL---:", photoURL);
+      console.log("Phản hồi từ Server:", response.data);
+
+      // console.log("User Google---:", result.user);
 
       dispatch({
         type: "login",
         payload: {
-          ...result.user,
+          ...response.data.user,
           avt: photoURL,
           email: email,
           full_name: displayName,

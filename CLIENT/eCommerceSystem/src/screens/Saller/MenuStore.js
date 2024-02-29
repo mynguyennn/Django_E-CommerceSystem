@@ -18,6 +18,7 @@ import axios, { endpoints } from "../../config/API";
 
 const windownWidth = Dimensions.get("window").width;
 const windownHeight = Dimensions.get("window").height;
+import { useRefreshData } from "../../context/RefreshDataContext";
 
 const imageBanner = [
   require("../../images/banner1.png"),
@@ -78,6 +79,8 @@ const HeaderComponent = () => {
 
 const ContentComponent = ({ navigation, storeData, route }) => {
   // const route = useRoute();
+  const { state: refreshState } = useRefreshData();
+
   //banner
   const [imgActive, setImgActive] = useState(0);
   const [counts, setCounts] = useState({ count_orders: 0, count_comments: 0 });
@@ -120,7 +123,7 @@ const ContentComponent = ({ navigation, storeData, route }) => {
     };
 
     fetchCounts();
-  }, [storeData, route.params?.refreshData]);
+  }, [refreshState]);
 
   return (
     <ScrollView style={{ height: "100%" }}>

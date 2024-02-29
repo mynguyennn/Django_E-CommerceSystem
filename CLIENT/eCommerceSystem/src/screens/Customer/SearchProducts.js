@@ -10,7 +10,6 @@ import axios, { endpoints } from "../../config/API";
 import { AirbnbRating, Rating } from "react-native-ratings";
 import { useRoute } from "@react-navigation/native";
 
-import { LoginContext } from "../../../App";
 import {
   Dimensions,
   SafeAreaView,
@@ -440,7 +439,6 @@ const ContentComponent = ({
                 <Text style={styles.priceProduct}>
                   {formatPrice(product.product.price)}
                 </Text>
-                {/* <Text style={styles.priceProductSold}>Đã bán 123</Text> */}
                 <View style={styles.bgRating}>
                   <Rating
                     type="star"

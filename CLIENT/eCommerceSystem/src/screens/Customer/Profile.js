@@ -11,6 +11,7 @@ import { Image, ScrollView } from "react-native";
 // } from "@fortawesome/free-solid-svg-icons";
 import axios, { endpoints } from "../../config/API";
 import { useRoute } from "@react-navigation/native";
+import { useCart } from "../../context/CartContext";
 
 import {
   Dimensions,
@@ -21,13 +22,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { LoginContext } from "../../../App";
+import { useLogin } from "../../context/LoginContext";
 
 const windownWidth = Dimensions.get("window").width;
 const windownHeight = Dimensions.get("window").height;
 
 export default Profile = ({ navigation }) => {
-  const [user, dispatch] = useContext(LoginContext);
+  const [user, dispatch] = useLogin();
   // console.log(user);
   return (
     <SafeAreaView style={styles.viewContainer}>
@@ -51,6 +52,9 @@ export default Profile = ({ navigation }) => {
 };
 
 const HeaderComponent = ({ user, navigation }) => {
+  const [{ cartItems }, dispatchCart] = useCart();
+  const itemCount = cartItems.length;
+
   return (
     <View style={styles.bgHeader}>
       <StatusBar barStyle="light-content" />
@@ -78,10 +82,34 @@ const HeaderComponent = ({ user, navigation }) => {
             navigation.navigate("Cart");
           }}
         >
-          <Image
-            style={styles.iconInbox}
-            source={require("../../images/cart.png")}
-          />
+          <View>
+            <Image
+              source={require("../../images/cart.png")}
+              style={styles.iconFB}
+            ></Image>
+            <Text
+              style={{
+                position: "absolute",
+                top: -12,
+                right: -9,
+                color: "white",
+                paddingTop: 2,
+                paddingBottom: 1,
+                paddingLeft: 6,
+                paddingRight: 6,
+                borderRadius: 100,
+                backgroundColor: "#c20302",
+                fontSize: 12,
+                borderWidth: 1,
+                borderColor: "white",
+                textAlign: "center",
+                alignItems: "center",
+                fontWeight: "500",
+              }}
+            >
+              {itemCount}
+            </Text>
+          </View>
         </TouchableOpacity>
         <TouchableOpacity>
           <Image
@@ -607,5 +635,10 @@ const styles = StyleSheet.create({
     color: "#EE4D2D",
     fontWeight: "500",
     marginLeft: 2,
+  },
+  iconFB: {
+    marginLeft: 15,
+    width: 26,
+    height: 26,
   },
 });

@@ -2,8 +2,9 @@ import { StatusBar } from "expo-status-bar";
 import React, { useState, useEffect, useRef, useContext } from "react";
 import axios, { endpoints } from "../../config/API";
 import * as Animatable from "react-native-animatable";
+import { useCart } from "../../context/CartContext";
+import { useRefreshData } from "../../context/RefreshDataContext";
 
-import { LoginContext } from "../../../App";
 import {
   Dimensions,
   SafeAreaView,
@@ -65,6 +66,8 @@ export default Home = ({ navigation }) => {
 
 const HeaderComponent = ({ navigation, products }) => {
   const [search, setSearch] = useState("");
+  const [{ cartItems }, dispatchCart] = useCart();
+  const itemCount = cartItems.length;
 
   //handle search product
   const handleSearch = () => {
@@ -98,10 +101,34 @@ const HeaderComponent = ({ navigation, products }) => {
             navigation.navigate("Cart");
           }}
         >
-          <Image
-            source={require("../../images/cart.png")}
-            style={styles.iconFB}
-          ></Image>
+          <View>
+            <Image
+              source={require("../../images/cart.png")}
+              style={styles.iconFB}
+            ></Image>
+            <Text
+              style={{
+                position: "absolute",
+                top: -12,
+                right: -4,
+                color: "white",
+                paddingTop: 2,
+                paddingBottom: 1,
+                paddingLeft: 6,
+                paddingRight: 6,
+                borderRadius: 100,
+                backgroundColor: "#c20302",
+                fontSize: 12,
+                borderWidth: 1,
+                borderColor: "white",
+                textAlign: "center",
+                alignItems: "center",
+                fontWeight: "500",
+              }}
+            >
+              {itemCount}
+            </Text>
+          </View>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.backgroundMess}>
@@ -117,6 +144,7 @@ const HeaderComponent = ({ navigation, products }) => {
 };
 
 const ContentComponent = ({ navigation, products, setProducts }) => {
+  const { state: refreshState } = useRefreshData();
   //banner
   const [imgActive, setImgActive] = useState(0);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
@@ -172,7 +200,9 @@ const ContentComponent = ({ navigation, products, setProducts }) => {
     };
 
     fetchData();
-  }, []);
+
+    console.log("load data");
+  }, [refreshState]);
 
   //format price
   const formatPrice = (price) => {
@@ -309,7 +339,7 @@ const ContentComponent = ({ navigation, products, setProducts }) => {
                             source={require("../../images/hot1.png")}
                             style={[
                               styles.newTag,
-                              { transform: [{ rotate: "40deg" }] },
+                              { transform: [{ rotate: "33deg" }] },
                             ]}
                           ></Image>
                         </Animatable.View>
@@ -398,7 +428,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     // marginBottom: "26%",
     // height: "100%",
-    // borderWidth: 5
+    // borderWidth: 5,
     marginBottom: 5,
   },
   productContainer: {

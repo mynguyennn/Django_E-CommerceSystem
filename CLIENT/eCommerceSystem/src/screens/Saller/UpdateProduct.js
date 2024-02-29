@@ -14,6 +14,8 @@ import DropDown from "react-native-dropdown-picker";
 import axios, { endpoints } from "../../config/API";
 import { useRoute } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
+import { useRefreshData } from "../../context/RefreshDataContext";
+import { Alert } from "react-native";
 
 const windownWidth = Dimensions.get("window").width;
 const windownHeight = Dimensions.get("window").height;
@@ -65,6 +67,8 @@ const HeaderComponent = () => {
 };
 
 const ContentComponent = ({ product, storeData, navigation }) => {
+  const { dispatch } = useRefreshData();
+
   const [categories, setCategories] = useState([]);
   const [additionalFields, setAdditionalFields] = useState(
     (product.product_attributes || [{}]).map(({ id, ...rest }) => ({
@@ -201,6 +205,11 @@ const ContentComponent = ({ product, storeData, navigation }) => {
   //update product
   const handleSaveProduct = async () => {
     try {
+      // thông báo nhập thiếu dữ liệu 
+      if(!productName || !productDescription || !productPrice || !productQuantity || !additionalImages.length == 0 || !additionalFields.length == 0 || !selectedCategory)
+      {
+        Alert.alert('Thông báo:', 'Vui lòng nhập đầy đủ thông tin!');
+      }
       const formData = new FormData();
 
       formData.append("name_product", productName);
@@ -239,6 +248,7 @@ const ContentComponent = ({ product, storeData, navigation }) => {
         storeData: storeData,
         refreshData: true,
       });
+      dispatch({ type: "REFRESH_DATA" });
     } catch (error) {
       console.error("Error updating product:", error);
     }

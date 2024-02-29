@@ -47,7 +47,6 @@ export default ProductListStats = ({ navigation }) => {
   );
 };
 
-
 const HeaderComponent = ({ countProduct, navigation }) => {
   return (
     <View style={{ flex: 1 }}>
