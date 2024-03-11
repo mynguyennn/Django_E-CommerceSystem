@@ -51,12 +51,12 @@ const HeaderComponent = ({ navigation }) => {
     <View style={{ flex: 1 }}>
       <View style={styles.containerHeader}>
         <View style={styles.signIn}>
-          <TouchableOpacity style={styles.bgIconMess}>
+          {/* <TouchableOpacity style={styles.bgIconMess}>
             <Image
               source={require("../../images/111.png")}
               style={styles.iconBack}
             ></Image>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity>
             <Text style={styles.textSignIn}>Thống kê cửa hàng</Text>
           </TouchableOpacity>
@@ -76,7 +76,7 @@ const ContentComponent = ({
   const [storeList, setStoreList] = useState([]);
   const [selectedStore, setSelectedStore] = useState(null);
   const [isModal, setIsModal] = useState(false);
-  const [selectedStatsType, setSelectedStatsType] = useState(null);
+  const [selectedStatsType, setSelectedStatsType] = useState("frequency");
 
   //call api
   useEffect(() => {
@@ -98,23 +98,20 @@ const ContentComponent = ({
   };
 
   const handleConfirmStats = () => {
-    console.log("Selected Stats Type:", selectedStatsType);
+    // console.log("Selected Stats Type:", selectedStatsType);
 
     let screenParams = {};
 
     switch (selectedStatsType) {
       case "frequency":
-        screenParams = { storeId: selectedStore.id };
+        screenParams = { storeId: selectedStore };
         navigation.navigate("StatsFrequencySale", screenParams);
         break;
       case "product":
-        screenParams = { storeId: selectedStore.id };
+        screenParams = { storeId: selectedStore };
         navigation.navigate("StatsTotalProduct", screenParams);
         break;
-      case "revenue":
-        screenParams = { storeId: selectedStore.id };
-        navigation.navigate("RevenueScreen", screenParams);
-        break;
+
       default:
         break;
     }
@@ -213,11 +210,19 @@ const ContentComponent = ({
                 style={[
                   styles.radioButton,
                   selectedStatsType === "frequency" &&
-                    styles.selectedRadioButton,
+                    styles.selectedRadioButtonFrequency,
                 ]}
                 onPress={() => setSelectedStatsType("frequency")}
               >
-                <Text style={styles.radioButtonText}>
+                <Text
+                  style={[
+                    styles.radioButtonText,
+                    selectedStatsType === "frequency" && {
+                      color: "white",
+                      fontWeight: "500",
+                    },
+                  ]}
+                >
                   Thống kê tần suất bán hàng
                 </Text>
               </TouchableOpacity>
@@ -225,40 +230,39 @@ const ContentComponent = ({
               <TouchableOpacity
                 style={[
                   styles.radioButton,
-                  selectedStatsType === "product" && styles.selectedRadioButton,
+                  selectedStatsType === "product" &&
+                    styles.selectedRadioButtonProduct,
                 ]}
                 onPress={() => setSelectedStatsType("product")}
               >
-                <Text style={styles.radioButtonText}>
+                <Text
+                  style={[
+                    styles.radioButtonText,
+                    selectedStatsType === "product" && {
+                      color: "white",
+                      fontWeight: "500",
+                    },
+                  ]}
+                >
                   Thống kê tổng sản phẩm kinh doanh
                 </Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.radioButton,
-                  selectedStatsType === "revenue" && styles.selectedRadioButton,
-                ]}
-                onPress={() => setSelectedStatsType("revenue")}
-              >
-                <Text style={styles.radioButtonText}>Thống kê doanh số</Text>
-              </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
-              style={styles.modalButtonConfirm}
-              onPress={handleConfirmStats}
-            >
-              <Text style={{ color: "white", fontWeight: "500" }}>
-                Xác Nhận
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalButtonCancel}
-              onPress={() => setIsModal(false)}
-            >
-              <Text style={{ color: "white", fontWeight: "500" }}>Hủy</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", marginTop: 10 }}>
+              <TouchableOpacity
+                style={styles.modalButtonConfirm}
+                onPress={handleConfirmStats}
+              >
+                <Text style={{ color: "white" }}>Xác Nhận</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalButtonCancel}
+                onPress={() => setIsModal(false)}
+              >
+                <Text style={{ color: "white" }}>Hủy</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -468,7 +472,7 @@ const styles = StyleSheet.create({
     width: "90%",
     paddingBottom: 20,
     paddingTop: 20,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: "white",
     borderWidth: 1,
     borderRadius: 10,
     borderColor: "#d4d4d4",
@@ -476,23 +480,28 @@ const styles = StyleSheet.create({
   },
   modalText: {
     fontSize: 16,
+    color: "#aa0000",
     marginBottom: 20,
+    fontWeight: "500",
   },
   modalButtonConfirm: {
-    backgroundColor: "green",
-    padding: 10,
-    width: 150,
+    backgroundColor: "#9b9b9b",
+    padding: 9,
+    width: 100,
     borderRadius: 5,
     alignItems: "center",
     marginBottom: 10,
+    // flexDirection:'row'
     // borderWidth: 1,
   },
   modalButtonCancel: {
-    backgroundColor: "#ce2222",
-    width: 150,
-    padding: 10,
+    marginLeft: 30,
+    backgroundColor: "#9b9b9b",
+    padding: 9,
+    width: 100,
     borderRadius: 5,
     alignItems: "center",
+    marginBottom: 10,
   },
   radioButton: {
     // flexDirection: "row",
@@ -503,13 +512,31 @@ const styles = StyleSheet.create({
   },
   selectedRadioButton: {
     // backgroundColor: "#cecece",
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 20,
+    borderWidth: 1.5,
     borderColor: "#f55939",
     padding: 10,
   },
   radioButtonText: {
     // fontWeight: "5F00",
     // color:'red'
+  },
+
+  selectedRadioButtonFrequency: {
+    width: 300,
+    backgroundColor: "#f55939",
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "white",
+    padding: 10,
+  },
+
+  selectedRadioButtonProduct: {
+    width: 300,
+    backgroundColor: "#f55939",
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "white",
+    padding: 10,
   },
 });

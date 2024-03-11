@@ -52,12 +52,12 @@ const HeaderComponent = ({ navigation }) => {
     <View style={{ flex: 1 }}>
       <View style={styles.containerHeader}>
         <View style={styles.signIn}>
-          <TouchableOpacity style={styles.bgIconMess}>
+          {/* <TouchableOpacity style={styles.bgIconMess}>
             <Image
               source={require("../../images/111.png")}
               style={styles.iconBack}
             ></Image>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity>
             <Text style={styles.textSignIn}>Danh sách sản phẩm</Text>
           </TouchableOpacity>
@@ -221,22 +221,25 @@ const ContentComponent = ({ navigation, products }) => {
             <Text style={styles.modalText}>
               Xác nhận sản phẩm? [{selectedProduct?.name_product}]
             </Text>
-            <TouchableOpacity
-              style={styles.modalButtonConfirm}
-              onPress={() =>
-                Confirm(selectedProduct?.id, selectedProduct?.store_info.id)
-              }
-            >
-              <Text style={{ color: "white", fontWeight: "500" }}>
-                Xác Nhận
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalButtonCancel}
-              onPress={() => setIsModal(false)}
-            >
-              <Text style={{ color: "white", fontWeight: "500" }}>Hủy</Text>
-            </TouchableOpacity>
+
+            <View style={{ flexDirection: "row" }}>
+              <TouchableOpacity
+                style={styles.modalButtonConfirm}
+                onPress={() =>
+                  Confirm(selectedProduct?.id, selectedProduct?.store_info.id)
+                }
+              >
+                <Text style={{ color: "white", fontWeight: "500" }}>
+                  Xác Nhận
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalButtonCancel}
+                onPress={() => setIsModal(false)}
+              >
+                <Text style={{ color: "white", fontWeight: "500" }}>Hủy</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -444,21 +447,26 @@ const styles = StyleSheet.create({
   modalText: {
     fontSize: 16,
     marginBottom: 20,
+    color: "#aa0000",
+    fontWeight: "500",
   },
   modalButtonConfirm: {
-    backgroundColor: "green",
-    padding: 10,
-    width: 150,
+    backgroundColor: "#9b9b9b",
+    padding: 9,
+    width: 100,
     borderRadius: 5,
     alignItems: "center",
     marginBottom: 10,
+    // flexDirection:'row'
     // borderWidth: 1,
   },
   modalButtonCancel: {
-    backgroundColor: "#ce2222",
-    width: 150,
-    padding: 10,
+    marginLeft: 30,
+    backgroundColor: "#9b9b9b",
+    padding: 9,
+    width: 100,
     borderRadius: 5,
     alignItems: "center",
+    marginBottom: 10,
   },
 });

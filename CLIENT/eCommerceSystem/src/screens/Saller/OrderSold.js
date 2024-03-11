@@ -53,7 +53,7 @@ const HeaderComponent = ({ navigation }) => {
       {/* Component Header */}
       <View style={styles.containerHeader}>
         <View style={styles.signIn}>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.bgIconMess}
             onPress={() =>
               navigation.navigate("MenuStore", {
@@ -66,7 +66,7 @@ const HeaderComponent = ({ navigation }) => {
               source={require("../../images/111.png")}
               style={styles.iconBack}
             ></Image>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <View>
             <Text style={styles.textSignIn}>Đơn hàng đã bán</Text>
@@ -92,7 +92,6 @@ const ContentComponent = ({ navigation, formatPrice }) => {
     await updateOrderStatus(orderId);
     console.log(orderId);
     navigation.navigate("OrderPendingList", {
-      refreshData: true,
       storeId: storeId,
     });
   };

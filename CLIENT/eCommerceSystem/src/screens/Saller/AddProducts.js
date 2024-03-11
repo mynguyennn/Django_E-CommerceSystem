@@ -13,6 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import DropDown from "react-native-dropdown-picker";
 import axios, { endpoints } from "../../config/API";
@@ -43,12 +44,12 @@ const HeaderComponent = () => {
     <View style={{ flex: 1 }}>
       <View style={styles.containerHeader}>
         <View style={styles.signIn}>
-          <TouchableOpacity style={styles.bgIconMess}>
+          {/* <TouchableOpacity style={styles.bgIconMess}>
             <Image
               source={require("../../images/111.png")}
               style={styles.iconBack}
             ></Image>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity>
             <Text style={styles.textSignIn}>Thêm sản phẩm</Text>
           </TouchableOpacity>
@@ -126,40 +127,40 @@ const ContentComponent = ({ navigation }) => {
         !price ||
         !quantity ||
         !selectedCategory ||
-        !attributeFields
+        !attributeFields ||
+        !images
       ) {
-        console.error("Thông tin sản phẩm không đủ!");
-        return;
+        Alert.alert("Thông báo:", "Vui lòng nhập đầy đủ thông tin!");
+      } else {
+        const productData = {
+          name_product: nameProduct,
+          description: description,
+          price: parseFloat(price),
+          quantity: parseInt(quantity),
+          category_id: selectedCategory,
+        };
+
+        const response = await axios.post(
+          endpoints.create_product(idStore),
+          productData
+        );
+
+        const productId = response.data.id;
+
+        console.log(idStore);
+
+        await uploadProductImages(productId);
+        await createAttribute(productId);
+
+        navigation.navigate("ProductList", {
+          storeData: storeData,
+          refreshData: true,
+        });
+
+        dispatch({ type: "REFRESH_DATA" });
+
+        console.log("Product created successfully!");
       }
-
-      const productData = {
-        name_product: nameProduct,
-        description: description,
-        price: parseFloat(price),
-        quantity: parseInt(quantity),
-        category_id: selectedCategory,
-      };
-
-      const response = await axios.post(
-        endpoints.create_product(idStore),
-        productData
-      );
-
-      const productId = response.data.id;
-
-      console.log(idStore);
-
-      await uploadProductImages(productId);
-      await createAttribute(productId);
-
-      navigation.navigate("ProductList", {
-        storeData: storeData,
-        refreshData: true,
-      });
-
-      dispatch({ type: "REFRESH_DATA" });
-
-      console.log("Product created successfully!");
     } catch (error) {
       console.error("Error creating product:", error);
     }

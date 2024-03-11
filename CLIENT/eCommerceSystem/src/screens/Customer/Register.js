@@ -12,9 +12,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import DropDown from "react-native-dropdown-picker";
-import { Alert } from "react-native";
 
 const windownWidth = Dimensions.get("window").width;
 const windownHeight = Dimensions.get("window").height;
@@ -97,40 +97,50 @@ const ContentComponent = ({ navigation }) => {
   //register
   const registerUser = async () => {
     try {
-      // thông báo nhập thiếu dữ liệu 
-      if(!fullName || !dateOfBirth  || !address || !email || !phone || !username || !password || !avatar || !selectedGender)
-      {
-        Alert.alert('Thông báo:', 'Vui lòng nhập đầy đủ thông tin!');
-      }
-      const filename = avatar.split("/").pop();
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `avatar/${match[1]}` : `avatar`;
-      const formData = new FormData();
-      formData.append("full_name", fullName);
-      formData.append("date_of_birth", dateOfBirth);
-      formData.append("gender", selectedGender);
-      formData.append("address", address);
-      formData.append("email", email);
-      formData.append("phone", phone);
-      formData.append("username", username);
-      formData.append("password", password);
-      formData.append("role", 3);
-      formData.append("avt", { uri: avatar, name: filename, type });
-
-      // const api = await authApi();
-      const response = await axios.post(endpoints.create_account, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      const data = response.data;
-
-      if (response.status === 200 || response.status === 201) {
-        console.log("Đăng ký thành công:", data);
-        navigation.navigate("Login");
+      // thông báo nhập thiếu dữ liệu
+      if (
+        !fullName ||
+        !dateOfBirth ||
+        !address ||
+        !email ||
+        !phone ||
+        !username ||
+        !password ||
+        !avatar ||
+        !selectedGender
+      ) {
+        Alert.alert("Thông báo:", "Vui lòng nhập đầy đủ thông tin!");
       } else {
-        console.log("Đăng ký không thành công:");
+        const filename = avatar.split("/").pop();
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `avatar/${match[1]}` : `avatar`;
+        const formData = new FormData();
+        formData.append("full_name", fullName);
+        formData.append("date_of_birth", dateOfBirth);
+        formData.append("gender", selectedGender);
+        formData.append("address", address);
+        formData.append("email", email);
+        formData.append("phone", phone);
+        formData.append("username", username);
+        formData.append("password", password);
+        formData.append("role", 3);
+        formData.append("avt", { uri: avatar, name: filename, type });
+
+        // const api = await authApi();
+        const response = await axios.post(endpoints.create_account, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+
+        const data = response.data;
+
+        if (response.status === 200 || response.status === 201) {
+          console.log("Đăng ký thành công:", data);
+          navigation.navigate("Login");
+        } else {
+          console.log("Đăng ký không thành công:");
+        }
       }
     } catch (error) {
       console.error("Lỗi kết nối:", error);

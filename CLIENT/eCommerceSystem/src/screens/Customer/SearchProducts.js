@@ -73,9 +73,13 @@ const HeaderComponent = ({
   const [filterModal, setFilterModal] = useState(false);
 
   const searchProducts = () => {
-    navigation.navigate("SearchProducts", {
-      kw: search,
-    });
+    if (search.trim() === "") {
+      alert("Vui lòng nhập sản phẩm cần tìm kiếm!");
+    } else {
+      navigation.navigate("SearchProducts", {
+        kw: search,
+      });
+    }
   };
 
   return (
@@ -106,7 +110,7 @@ const HeaderComponent = ({
 
         <TouchableOpacity
           style={styles.backgroundCart}
-          onPress={() => setFilterModal(true)}
+          // onPress={() => setFilterModal(true)}
         >
           <Image
             source={require("../../images/filter2.png")}
@@ -170,7 +174,9 @@ const ContentComponent = ({
   useEffect(() => {
     const filterProductsByCategory = async () => {
       try {
-        const responseListProduct = await axios.get(endpoints.products);
+        const responseListProduct = await axios.get(
+          endpoints.list_product_bySearch
+        );
 
         const filtered = responseListProduct.data.filter((product) =>
           idProducts.includes(product.product.id)

@@ -2,6 +2,7 @@ import { StatusBar } from "expo-status-bar";
 import React, { useContext, useState, useEffect } from "react";
 import { Image, ScrollView, Alert, FlatList, Modal } from "react-native";
 import WebView from "react-native-webview";
+import { useRefreshData } from "../../context/RefreshDataContext";
 
 import {
   Dimensions,
@@ -51,12 +52,12 @@ const HeaderComponent = () => {
       {/* Component Header */}
       <View style={styles.containerHeader}>
         <View style={styles.signIn}>
-          <TouchableOpacity style={styles.bgIconMess}>
+          {/* <TouchableOpacity style={styles.bgIconMess}>
             <Image
               source={require("../../images/111.png")}
               style={styles.iconBack}
             ></Image>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <View>
             <Text style={styles.textSignIn}>Đơn chờ xác nhận</Text>
@@ -69,6 +70,8 @@ const HeaderComponent = () => {
 };
 
 const ContentComponent = ({ navigation, formatPrice }) => {
+  const { state: refreshState } = useRefreshData();
+
   const route = useRoute();
   const { user, totalShip } = route.params;
   const [orders, setOrders] = useState([]);
@@ -105,7 +108,7 @@ const ContentComponent = ({ navigation, formatPrice }) => {
     };
 
     fetchOrders();
-  }, [route.params?.refreshData]);
+  }, [refreshState]);
 
   //bill item
   const BillItem = ({ order }) => {

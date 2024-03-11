@@ -3,6 +3,8 @@ import React, { useContext, useState, useEffect } from "react";
 import { Image, ScrollView, FlatList } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import axios, { endpoints } from "../../config/API";
+import { useRefreshData } from "../../context/RefreshDataContext";
+
 import {
   Dimensions,
   SafeAreaView,
@@ -54,12 +56,12 @@ const HeaderComponent = ({ countProduct, navigation }) => {
     <View style={{ flex: 1 }}>
       <View style={styles.containerHeader}>
         <View style={styles.signIn}>
-          <TouchableOpacity style={styles.bgIconMess}>
+          {/* <TouchableOpacity style={styles.bgIconMess}>
             <Image
               source={require("../../images/111.png")}
               style={styles.iconBack}
             ></Image>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity>
             <Text style={styles.textSignIn}>
               Sản phẩm đánh giá ({countProduct})
@@ -78,6 +80,8 @@ const ContentComponent = ({
   storeId,
   setCountProduct,
 }) => {
+  const { state: refreshState } = useRefreshData();
+
   const [productList, setProductList] = useState([]);
 
   //call api product
@@ -97,14 +101,14 @@ const ContentComponent = ({
           }
           return count;
         });
-        console.log("========products", response.data);
+        // console.log("========products", response.data);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     };
 
     fetchData();
-  }, []);
+  }, [refreshState]);
 
   //format price
   const formatPrice = (price) => {
@@ -113,11 +117,6 @@ const ContentComponent = ({
       currency: "VND",
     });
   };
-
-  //handle update
-  // const handleUpdateProduct = (product) => {
-  //   navigation.navigate("UpdateProduct", { product });
-  // };
 
   return (
     <ScrollView>

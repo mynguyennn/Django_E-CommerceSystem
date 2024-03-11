@@ -15,7 +15,6 @@ import axios, { endpoints } from "../../config/API";
 import { useRoute } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { useRefreshData } from "../../context/RefreshDataContext";
-import { Alert } from "react-native";
 
 const windownWidth = Dimensions.get("window").width;
 const windownHeight = Dimensions.get("window").height;
@@ -50,12 +49,12 @@ const HeaderComponent = () => {
     <View style={{ flex: 1 }}>
       <View style={styles.containerHeader}>
         <View style={styles.signIn}>
-          <TouchableOpacity style={styles.bgIconMess}>
+          {/* <TouchableOpacity style={styles.bgIconMess}>
             <Image
               source={require("../../images/111.png")}
               style={styles.iconBack}
             ></Image>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity>
             <Text style={styles.textSignIn}>Cập nhật sản phẩm</Text>
           </TouchableOpacity>
@@ -205,11 +204,6 @@ const ContentComponent = ({ product, storeData, navigation }) => {
   //update product
   const handleSaveProduct = async () => {
     try {
-      // thông báo nhập thiếu dữ liệu 
-      if(!productName || !productDescription || !productPrice || !productQuantity || !additionalImages.length == 0 || !additionalFields.length == 0 || !selectedCategory)
-      {
-        Alert.alert('Thông báo:', 'Vui lòng nhập đầy đủ thông tin!');
-      }
       const formData = new FormData();
 
       formData.append("name_product", productName);

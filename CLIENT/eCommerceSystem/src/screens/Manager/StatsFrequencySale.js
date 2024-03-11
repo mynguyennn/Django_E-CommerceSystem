@@ -1,4 +1,3 @@
-
 import { StatusBar } from "expo-status-bar";
 import React, { useContext, useState, useEffect } from "react";
 import { Image, ScrollView, FlatList } from "react-native";
@@ -27,7 +26,7 @@ import { useRoute } from "@react-navigation/native";
 const windownWidth = Dimensions.get("window").width;
 const windownHeight = Dimensions.get("window").height;
 
-export default StoretStats = ({ navigation }) => {
+export default StatsFrequencySale = ({ navigation }) => {
   return (
     <View style={styles.viewContainer}>
       <View style={styles.viewHeader}>
@@ -50,16 +49,14 @@ const HeaderComponent = () => {
     <View style={{ flex: 1 }}>
       <View style={styles.containerHeader}>
         <View style={styles.signIn}>
-          <TouchableOpacity style={styles.bgIconMess}>
+          {/* <TouchableOpacity style={styles.bgIconMess}>
             <Image
               source={require("../../images/111.png")}
               style={styles.iconBack}
             ></Image>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity>
-            <Text style={styles.textSignIn}>
-              Thống kê doanh thu các cửa hàng
-            </Text>
+            <Text style={styles.textSignIn}>Thống kê tần suất bán hàng</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -70,13 +67,14 @@ const HeaderComponent = () => {
 
 const ContentComponent = ({ navigation }) => {
   const route = useRoute();
-  // const { storeData } = route.params;
-  const [StoreStatsMonth, setStoreStatsMonth] = useState([]);
-  const [StoreStatsQuarter, setStoreStatsQuarter] = useState([]);
-  const [StoreStatsYears, setStoreStatsYears] = useState([]);
+  const { storeId } = route.params;
+  // console.log(storeId);
+  const [productStatsMonth, setProductStatsMonth] = useState([]);
+  const [productStatsQuarter, setProductStatsQuarter] = useState([]);
   const [selectedYear, setSelectedYear] = useState(null);
-  const [selectedMonth, setSelectedMonth] = useState(null);
-  const [selectedQuarter, setSelectedQuarter] = useState(null);
+  const [barDataMonth, setBarDataMonth] = useState([]);
+  const [barDataQuarter, setBarDataQuarter] = useState([]);
+
   const months = [
     "Tháng 1",
     "Tháng 2",
@@ -98,14 +96,6 @@ const ContentComponent = ({ navigation }) => {
     setSelectedYear(year);
   };
 
-  const handleMonthChange = (month) => {
-    setSelectedMonth(month);
-    // console.log(month);
-  };
-  const handleQuarterChange = (quarter) => {
-    setSelectedQuarter(quarter);
-  };
-
   //color
   const getRandomColor = () => {
     const letters = "0123456789ABCDEF";
@@ -119,7 +109,6 @@ const ContentComponent = ({ navigation }) => {
   //css
   const lineConfig = {
     initialSpacing: 20,
-    // curved: true,
     isAnimated: true,
     delay: 0,
     thickness: 2,
@@ -136,55 +125,70 @@ const ContentComponent = ({ navigation }) => {
     textShiftY: 0,
     shiftY: 0,
     startIndex: 0,
-    // endIndex: barDataMonth.length - 1,
   };
-
-  //data
-  const barDataMonth = StoreStatsMonth.map((monthData, index) => {
-    // const monthData = StoreStatsMonth[index] || { order_counts: 0 };
-    return {
-      value: monthData.order_count,
-      label: monthData.name_store,
-      frontColor: getRandomColor(),
-    };
-  });
-
-  const barDataQuarter = StoreStatsQuarter.map((quarterData, index) => {
-    // const quarterData = StoreStatsQuarter[index] || { order_counts: 0 };
-    return {
-      value: quarterData.order_count,
-      label: quarterData.name_store,
-      frontColor: getRandomColor(),
-    };
-  });
-
-  const barDataYear = StoreStatsYears.map((yearData, index) => ({
-    value: yearData.order_count,
-    label: yearData.name_store,
-    frontColor: getRandomColor(),
-  }));
-
-  const barDataNull = [
-    { value: 0, label: "", frontColor: getRandomColor() },
-    { value: 0, label: "", frontColor: getRandomColor() },
-    { value: 0, label: "", frontColor: getRandomColor() },
-    { value: 0, label: "", frontColor: getRandomColor() },
-  ];
 
   //product stats
   useEffect(() => {
     const fetchData = async () => {
-      //year
+      //month
       try {
         if (selectedYear) {
-          const response = await axios.get(endpoints.get_order_count_in_year, {
-            params: {
-              // category_id: categoryId,
-              year: selectedYear,
-            },
+          const response = await axios.get(
+            endpoints.get_order_count_month(storeId.id),
+            {
+              params: {
+                year: selectedYear,
+              },
+            }
+          );
+          setProductStatsMonth(response.data);
+          // console.log("=======api", response.data);
+
+          //data
+          const monthlyStats = response.data;
+
+          const newBarDataMonth = months.map((month, index) => {
+            const monthData = monthlyStats[index] || { total_orders: 0 };
+            return {
+              value: monthData.total_orders,
+              label: month,
+              frontColor: getRandomColor(),
+            };
           });
-          setStoreStatsYears(response.data);
-          // console.log("========", response.data);
+
+          setBarDataMonth(newBarDataMonth);
+
+          // console.log("===========", newBarDataMonth);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+
+      //quarter
+      try {
+        if (selectedYear) {
+          const response = await axios.get(
+            endpoints.get_order_count_quarter(storeId.id),
+            {
+              params: {
+                year: selectedYear,
+              },
+            }
+          );
+          setProductStatsQuarter(response.data);
+
+          //data
+          const quarterlyStats = response.data;
+
+          const newBarDataQuarter = quarterlyStats.map((quarterData, index) => {
+            return {
+              value: quarterData.total_orders || 0,
+              label: `Quý ${quarterData.quarter}`,
+              frontColor: getRandomColor(),
+            };
+          });
+
+          setBarDataQuarter(newBarDataQuarter);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -192,51 +196,9 @@ const ContentComponent = ({ navigation }) => {
     };
 
     fetchData();
+  }, [selectedYear, storeId]);
 
-    const fetchDataMonth = async () => {
-      //month
-      try {
-        if (selectedMonth) {
-          const response = await axios.get(endpoints.get_order_count_in_month, {
-            params: {
-              // category_id: categoryId,
-              month: selectedMonth,
-            },
-          });
-          setStoreStatsMonth(response.data);
-          console.log("========", response.data);
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
-
-    fetchDataMonth();
-
-    const fetchDataQuarter = async () => {
-      //quarter
-      try {
-        if (selectedQuarter) {
-          const response = await axios.get(
-            endpoints.get_order_count_in_quarter,
-            {
-              params: {
-                // category_id: categoryId,
-                quarter: selectedQuarter,
-              },
-            }
-          );
-          setStoreStatsQuarter(response.data);
-          // console.log("========", response.data);
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
-
-    fetchDataQuarter();
-  }, [selectedYear, selectedMonth, selectedQuarter]);
-
+  // console.log(selectedYear);
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
@@ -245,6 +207,48 @@ const ContentComponent = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         <View>
+          <View
+            style={{
+              marginBottom: 15,
+              marginTop: 25,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <View>
+              <Image
+                style={{
+                  width: 70,
+                  height: 70,
+                  borderRadius: 100,
+                }}
+                source={
+                  storeId.avt
+                    ? { uri: storeId.avt }
+                    : require("../../images/chualogin.png")
+                }
+              />
+            </View>
+            <View>
+              <Text
+                style={{
+                  marginLeft: 15,
+                  fontSize: 15,
+
+                  // borderRadius:5
+                }}
+              >
+                Cửa hàng:{" "}
+                <Text style={{ color: "#f55939", fontWeight: "500" }}>
+                  [ {storeId.name_store} ]
+                </Text>
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.brButton666}></View>
+
           <Text
             style={{
               color: "black",
@@ -270,86 +274,17 @@ const ContentComponent = ({ navigation }) => {
         </View>
 
         <View style={styles.customBarChartStyle}>
-          {/* year */}
+          {/*month*/}
           <Text
             style={{
               color: "black",
               fontWeight: "500",
               fontSize: 14,
-              marginTop: 50,
+              // marginTop: 25,
               marginBottom: 10,
             }}
           >
-            Thống kê năm [ {selectedYear} ]
-          </Text>
-          {barDataYear.length > 0 ? (
-            <BarChart
-              showFractionalValue
-              showYAxisIndices
-              barWidth={50}
-              noOfSections={5}
-              maxValue={100}
-              data={barDataYear}
-              isAnimated
-              width={300}
-              height={250}
-              showLine
-              lineConfig={lineConfig}
-            />
-          ) : (
-            <BarChart
-              showFractionalValue
-              showYAxisIndices
-              barWidth={50}
-              noOfSections={5}
-              maxValue={100000000}
-              data={barDataNull}
-              isAnimated
-              width={300}
-              height={250}
-              showLine
-              lineConfig={lineConfig}
-            />
-          )}
-        </View>
-
-        <View>
-          <Text
-            style={{
-              color: "black",
-              fontWeight: "500",
-              fontSize: 14,
-              marginTop: 25,
-            }}
-          >
-            Chọn tháng:
-          </Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedMonth}
-              onValueChange={(itemValue) => handleMonthChange(itemValue)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Chọn" value="" />
-              {months.map((month, index) => (
-                <Picker.Item key={index} label={month} value={index + 1} />
-              ))}
-            </Picker>
-          </View>
-        </View>
-
-        <View style={styles.customBarChartStyle}>
-          {/* month */}
-          <Text
-            style={{
-              color: "black",
-              fontWeight: "500",
-              fontSize: 14,
-              marginTop: 50,
-              marginBottom: 10,
-            }}
-          >
-            Thống kê tháng [ {selectedMonth} ]
+            Thống kê 12 tháng năm [ {selectedYear} ]
           </Text>
           {barDataMonth.length > 0 ? (
             <BarChart
@@ -369,45 +304,56 @@ const ContentComponent = ({ navigation }) => {
             <BarChart
               showFractionalValue
               showYAxisIndices
-              barWidth={50}
+              barWidth={100}
               noOfSections={5}
-              maxValue={100000000}
-              data={barDataNull}
+              maxValue={50}
+              data={[]}
               isAnimated
               width={300}
               height={250}
-              showLine
-              lineConfig={lineConfig}
             />
           )}
-        </View>
 
-        <View>
-          <Text
-            style={{
-              color: "black",
-              fontWeight: "500",
-              fontSize: 14,
-              marginTop: 25,
-            }}
+          {/* table month */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.tableContainer}
           >
-            Chọn quý:
-          </Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedQuarter}
-              onValueChange={(itemValue) => handleQuarterChange(itemValue)}
-              style={styles.picker}
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "center",
+                alignItems: "center",
+                width: "100%",
+              }}
             >
-              <Picker.Item label="Chọn" value="" />
-              {quarters.map((quarter, index) => (
-                <Picker.Item key={index} label={quarter} value={index + 1} />
+              {months.map((month, index) => (
+                <View
+                  key={index}
+                  style={{
+                    borderWidth: 0.8,
+                    padding: 10,
+                    borderRadius: 5,
+                    height: 100,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    marginRight: 5,
+                    marginLeft: 5,
+                    borderColor: "#a0a0a0",
+                  }}
+                >
+                  <Text style={{ color: "#EE4D2D", marginBottom: 5 }}>
+                    {month}
+                  </Text>
+                  <Text style={{ fontWeight: "500" }}>
+                    {barDataMonth[index]?.value || 0} đơn hàng
+                  </Text>
+                </View>
               ))}
-            </Picker>
-          </View>
-        </View>
+            </View>
+          </ScrollView>
 
-        <View style={styles.customBarChartStyle}>
           {/* quarter */}
           <Text
             style={{
@@ -418,7 +364,7 @@ const ContentComponent = ({ navigation }) => {
               marginBottom: 10,
             }}
           >
-            Thống kê quý [ {selectedQuarter} ]
+            Thống kê 4 quý năm [ {selectedYear} ]
           </Text>
           {barDataQuarter.length > 0 ? (
             <BarChart
@@ -426,7 +372,7 @@ const ContentComponent = ({ navigation }) => {
               showYAxisIndices
               barWidth={50}
               noOfSections={5}
-              maxValue={100}
+              maxValue={50}
               data={barDataQuarter}
               isAnimated
               width={300}
@@ -440,15 +386,53 @@ const ContentComponent = ({ navigation }) => {
               showYAxisIndices
               barWidth={50}
               noOfSections={5}
-              maxValue={100000000}
-              data={barDataNull}
+              maxValue={50}
+              data={[]}
               isAnimated
               width={300}
               height={250}
-              showLine
-              lineConfig={lineConfig}
             />
           )}
+          {/* table quarter */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.tableContainer1}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "center",
+                alignItems: "center",
+                width: "100%",
+                marginTop: 20,
+              }}
+            >
+              {productStatsQuarter.map((quarterData, index) => (
+                <View
+                  key={index}
+                  style={{
+                    borderWidth: 0.8,
+                    padding: 10,
+                    borderRadius: 5,
+                    height: 100,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    marginRight: 5,
+                    marginLeft: 5,
+                    borderColor: "#a0a0a0",
+                  }}
+                >
+                  <Text style={{ color: "#EE4D2D", marginBottom: 5 }}>
+                    {quarters[index]}
+                  </Text>
+                  <Text style={{ fontWeight: "500" }}>
+                    {quarterData.total_orders || 0} đơn hàng
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
         </View>
       </ScrollView>
     </View>
@@ -537,13 +521,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f0f0",
     marginBottom: 20,
   },
-  // brButton666: {
-  //   height: 2,
-  //   width: "100%",
-  //   backgroundColor: "white",
-  //   marginTop: 30,
-  //   marginBottom: 30,
-  // },
+  brButton666: {
+    marginTop: 10,
+    height: 2,
+    width: "100%",
+    backgroundColor: "#F2F2F2",
+  },
   bgButton: {
     height: 45,
     width: "90%",
@@ -560,7 +543,7 @@ const styles = StyleSheet.create({
     // fontSize: 10,
     // width: 300, // Set your desired width
     // height: 200,
-    marginTop: 10,
+    marginTop: 30,
     // width: "200%",
     // borderWidth: 1,
     marginBottom: 50,
@@ -603,6 +586,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   tableContainer: {
-    marginTop: 15,
+    marginTop: 40,
+  },
+  tableContainer1: {
+    marginTop: 20,
   },
 });

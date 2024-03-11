@@ -49,12 +49,12 @@ const HeaderComponent = () => {
     <View style={{ flex: 1 }}>
       <View style={styles.containerHeader}>
         <View style={styles.signIn}>
-          <TouchableOpacity style={styles.bgIconMess}>
+          {/* <TouchableOpacity style={styles.bgIconMess}>
             <Image
               source={require("../../images/111.png")}
               style={styles.iconBack}
             ></Image>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity>
             <Text style={styles.textSignIn}>Thống kê sản phẩm</Text>
           </TouchableOpacity>
@@ -68,7 +68,7 @@ const HeaderComponent = () => {
 const ContentComponent = ({ navigation }) => {
   const route = useRoute();
   const { storeId } = route.params;
-  console.log(storeId);
+  // console.log(storeId);
   const [productStatsMonth, setProductStatsMonth] = useState([]);
   const [productStatsQuarter, setProductStatsQuarter] = useState([]);
   const [selectedYear, setSelectedYear] = useState(null);
@@ -134,7 +134,7 @@ const ContentComponent = ({ navigation }) => {
       try {
         if (selectedYear) {
           const response = await axios.get(
-            endpoints.product_count_in_month(storeId),
+            endpoints.product_count_in_month(storeId.id),
             {
               params: {
                 year: selectedYear,
@@ -143,11 +143,8 @@ const ContentComponent = ({ navigation }) => {
           );
           setProductStatsMonth(response.data);
 
+          //data
           const monthlyStats = response.data.monthly_stats;
-
-          monthlyStats.forEach((monthData, index) => {
-            console.log(`Month ${index + 1}: ${monthData.total_products}`);
-          });
 
           const newBarDataMonth = months.map((month, index) => {
             const monthData = monthlyStats[index] || { total_products: 0 };
@@ -168,20 +165,17 @@ const ContentComponent = ({ navigation }) => {
       try {
         if (selectedYear) {
           const response = await axios.get(
-            endpoints.product_count_in_quarter(storeId),
+            endpoints.product_count_in_quarter(storeId.id),
             {
               params: {
                 year: selectedYear,
               },
             }
           );
-          const quarterlyStats = response.data.quarterly_stats;
+          setProductStatsQuarter(response.data.quarterly_stats);
 
-          quarterlyStats.forEach((quarterData, index) => {
-            console.log(
-              `Quarter ${quarterData.quarter}: ${quarterData.total_products}`
-            );
-          });
+          //data
+          const quarterlyStats = response.data.quarterly_stats;
 
           const newBarDataQuarter = quarterlyStats.map((quarterData, index) => {
             return {
@@ -192,7 +186,6 @@ const ContentComponent = ({ navigation }) => {
           });
 
           setBarDataQuarter(newBarDataQuarter);
-          setProductStatsQuarter(quarterlyStats);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -211,6 +204,46 @@ const ContentComponent = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         <View>
+          <View
+            style={{
+              marginBottom: 15,
+              marginTop: 25,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <View>
+              <Image
+                style={{
+                  width: 70,
+                  height: 70,
+                  borderRadius: 100,
+                }}
+                source={
+                  storeId.avt
+                    ? { uri: storeId.avt }
+                    : require("../../images/chualogin.png")
+                }
+              />
+            </View>
+            <View>
+              <Text
+                style={{
+                  marginLeft: 15,
+                  fontSize: 15,
+
+                  // borderRadius:5
+                }}
+              >
+                Cửa hàng:{" "}
+                <Text style={{ color: "#f55939", fontWeight: "500" }}>
+                  [ {storeId.name_store} ]
+                </Text>
+              </Text>
+            </View>
+          </View>
+
           <View style={styles.brButton666}></View>
 
           <Text
@@ -278,7 +311,7 @@ const ContentComponent = ({ navigation }) => {
               showYAxisIndices
               barWidth={50}
               noOfSections={5}
-              maxValue={10}
+              maxValue={50}
               data={barDataMonth}
               isAnimated
               width={300}
@@ -292,7 +325,7 @@ const ContentComponent = ({ navigation }) => {
               showYAxisIndices
               barWidth={50}
               noOfSections={5}
-              maxValue={10}
+              maxValue={50}
               data={[]}
               isAnimated
               width={300}
@@ -358,7 +391,7 @@ const ContentComponent = ({ navigation }) => {
               showYAxisIndices
               barWidth={50}
               noOfSections={5}
-              maxValue={10}
+              maxValue={50}
               data={barDataQuarter}
               isAnimated
               width={300}
@@ -372,7 +405,7 @@ const ContentComponent = ({ navigation }) => {
               showYAxisIndices
               barWidth={50}
               noOfSections={5}
-              maxValue={10}
+              maxValue={50}
               data={[]}
               isAnimated
               width={300}

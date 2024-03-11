@@ -1,9 +1,10 @@
 import { StatusBar } from "expo-status-bar";
 import React, { useContext, useState, useEffect } from "react";
-import { Image, ScrollView, FlatList, Alert } from "react-native";
+import { Image, ScrollView, FlatList } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRoute } from "@react-navigation/native";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { Alert } from "react-native";
 
 import {
   Dimensions,
@@ -44,12 +45,12 @@ const HeaderComponent = () => {
     <View style={{ flex: 1 }}>
       <View style={styles.containerHeader}>
         <View style={styles.signIn}>
-          <TouchableOpacity style={styles.bgIconMess}>
+          {/* <TouchableOpacity style={styles.bgIconMess}>
             <Image
               source={require("../../images/111.png")}
               style={styles.iconBack}
             ></Image>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity>
             <Text style={styles.textSignIn}>Thông tin tài khoản</Text>
           </TouchableOpacity>
@@ -145,10 +146,9 @@ const ContentComponent = ({ navigation }) => {
   //handle update profile
   const handleUpdateProfile = async () => {
     try {
-      // thông báo nhập thiếu dữ liệu 
-      if(!fullName || !dateOfBirth || !email || !address || !phone || !gender || !avt)
-      {
-        Alert.alert('Thông báo:', 'Vui lòng nhập đầy đủ thông tin!');
+      if (!selectedGender || !gender) {
+        Alert.alert("Thông báo:", "Vui lòng nhập đầy đủ thông tin!");
+      } else {
       }
       const filename = avatar.split("/").pop();
       const match = /\.(\w+)$/.exec(filename);
@@ -159,6 +159,7 @@ const ContentComponent = ({ navigation }) => {
       formData.append("email", email);
       formData.append("phone", phone);
       formData.append("address", address);
+      formData.append("gender", selectedGender);
       formData.append("avt", { uri: avatar, name: filename, type });
 
       const response = await axios.patch(

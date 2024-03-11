@@ -3,6 +3,8 @@ import React, { useContext, useState, useEffect } from "react";
 import { Image, ScrollView, FlatList, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import axios, { endpoints, authApi } from "../../config/API";
+import { useRefreshData } from "../../context/RefreshDataContext";
+
 import {
   Dimensions,
   SafeAreaView,
@@ -62,12 +64,12 @@ const HeaderComponent = ({ countCmt, countProduct, navigation }) => {
     <View style={{ flex: 1 }}>
       <View style={styles.containerHeader}>
         <View style={styles.signIn}>
-          <TouchableOpacity style={styles.bgIconMess}>
+          {/* <TouchableOpacity style={styles.bgIconMess}>
             <Image
               source={require("../../images/111.png")}
               style={styles.iconBack}
             ></Image>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity>
             <Text style={styles.textSignIn}>Đánh giá ({countCmt})</Text>
           </TouchableOpacity>
@@ -86,6 +88,8 @@ const ContentComponent = ({
   avgRating,
   countCmt,
 }) => {
+  const { dispatch, state: refreshState } = useRefreshData();
+
   const [productList, setProductList] = useState([]);
   const [selectedComment, setSelectedComment] = useState(null);
   const [replyText, setReplyText] = useState("");
@@ -114,7 +118,7 @@ const ContentComponent = ({
     };
 
     fetchData();
-  }, []);
+  }, [refreshState]);
 
   //handle reply cmt
   const handleReply = (comment) => {
@@ -164,6 +168,7 @@ const ContentComponent = ({
 
       setReplyText("");
       setSelectedComment(null);
+      dispatch({ type: "REFRESH_DATA_UPDATECMT" });
     } catch (error) {
       console.error("Error replying to comment:", error);
     }
@@ -186,17 +191,14 @@ const ContentComponent = ({
         new_content: newContent,
       });
 
-      console.log("Comment updated:", response.data);
+      // console.log("Comment updated:", response.data);
 
       setEditingCommentId(null);
       setEditedCommentContent("");
+      dispatch({ type: "REFRESH_DATA_UPDATECMT" });
     } catch (error) {
       console.error("Error updating comment:", error);
     }
-  };
-  const handleCancelEdit = () => {
-    setEditingCommentId(null);
-    setEditedCommentContent("");
   };
 
   // handle delete cmt
@@ -219,8 +221,8 @@ const ContentComponent = ({
                   endpoints.delete_comment(reply.id)
                 );
 
-                console.log("Comment deleted:", response.data);
-                // setRefest(true);
+                // console.log("Comment deleted:", response.data);
+                dispatch({ type: "REFRESH_DATA_UPDATECMT" });
               } catch (error) {
                 console.error("Lỗi khi xóa bình luận:", error);
               }
@@ -232,6 +234,11 @@ const ContentComponent = ({
     } catch (error) {
       console.error("Lỗi khi hiển thị cảnh báo xác nhận:", error);
     }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditedCommentContent("");
   };
 
   return (
@@ -366,7 +373,7 @@ const ContentComponent = ({
                         </Text>
                       </View>
                     </View>
-
+                    {/* rep cmt */}
                     <TouchableOpacity
                       style={{
                         position: "absolute",
@@ -525,8 +532,8 @@ const ContentComponent = ({
                           </View>
 
                           {editingCommentId === reply.id ? (
-                            // save and cancel buttons editing
                             <>
+                              {/* save cmt update */}
                               <TouchableOpacity
                                 onPress={() => handleUpdateComment(reply)}
                                 style={{
@@ -542,6 +549,8 @@ const ContentComponent = ({
                                   style={styles.iconShop1111}
                                 ></Image>
                               </TouchableOpacity>
+
+                              {/* cancel cmt update */}
                               <TouchableOpacity
                                 onPress={() => handleCancelEdit()}
                                 style={{
@@ -560,7 +569,7 @@ const ContentComponent = ({
                             </>
                           ) : (
                             <>
-                              {/* Update comment button */}
+                              {/* btn update */}
                               <TouchableOpacity
                                 style={{
                                   position: "absolute",
@@ -576,7 +585,8 @@ const ContentComponent = ({
                                   style={styles.iconShop111}
                                 ></Image>
                               </TouchableOpacity>
-                              {/* Delete comment button */}
+
+                              {/* btn delete */}
                               <TouchableOpacity
                                 style={{
                                   position: "absolute",

@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import React, { useContext, useState, useReducer, useEffect } from "react";
-import { Image, ScrollView } from "react-native";
+import { Image, ScrollView, Alert } from "react-native";
 // import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 // import {
 //   faLight,
@@ -245,7 +245,7 @@ const ContentComponent = ({ dispatch, navigation, user }) => {
           ></Image>
         </TouchableOpacity>
 
-        <View style={styles.brContent1}></View>
+        {/* <View style={styles.brContent1}></View>
         <TouchableOpacity style={styles.bgIconBill}>
           <Image
             source={require("../../images/setting2.png")}
@@ -256,7 +256,7 @@ const ContentComponent = ({ dispatch, navigation, user }) => {
             source={require("../../images/settingnext.png")}
             style={styles.iconNext}
           ></Image>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <View style={styles.brContent1}></View>
         <TouchableOpacity
@@ -284,7 +284,7 @@ const ContentComponent = ({ dispatch, navigation, user }) => {
         </TouchableOpacity>
 
         <View style={styles.brContent}></View>
-        <TouchableOpacity style={styles.bgIconBill}>
+        {/* <TouchableOpacity style={styles.bgIconBill}>
           <Image
             source={require("../../images/setting4.png")}
             style={styles.iconFollow}
@@ -294,7 +294,7 @@ const ContentComponent = ({ dispatch, navigation, user }) => {
             source={require("../../images/settingnext.png")}
             style={styles.iconNext}
           ></Image>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <View style={styles.brContent1}></View>
         <TouchableOpacity
@@ -346,7 +346,7 @@ const ContentComponent = ({ dispatch, navigation, user }) => {
           ></Image>
         </TouchableOpacity>
 
-        <View style={styles.brContent}></View>
+        {/* <View style={styles.brContent}></View>
         <TouchableOpacity style={styles.bgIconBill}>
           <Image
             source={require("../../images/setting7.png")}
@@ -357,7 +357,7 @@ const ContentComponent = ({ dispatch, navigation, user }) => {
             source={require("../../images/settingnext.png")}
             style={styles.iconNext}
           ></Image>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <View style={styles.brContent}></View>
         <TouchableOpacity
@@ -365,13 +365,17 @@ const ContentComponent = ({ dispatch, navigation, user }) => {
           onPress={() => {
             const userId = user && user.id;
 
-            //id login
+            // id login
             if (user) {
               if (
                 storeData &&
                 storeData.some((store) => store.account === userId)
               ) {
-                navigation.navigate("MenuStore", { storeData });
+                if (storeData.some((store) => store.active)) {
+                  navigation.navigate("MenuStore", { storeData });
+                } else {
+                  Alert.alert("Thông báo", "Cửa hàng chưa được xác nhận!");
+                }
               } else {
                 navigation.navigate("AddStore");
               }

@@ -71,9 +71,13 @@ const HeaderComponent = ({ navigation, products }) => {
 
   //handle search product
   const handleSearch = () => {
-    navigation.navigate("SearchProducts", {
-      kw: search,
-    });
+    if (search.trim() === "") {
+      alert("Vui lòng nhập sản phẩm cần tìm kiếm!");
+    } else {
+      navigation.navigate("SearchProducts", {
+        kw: search,
+      });
+    }
   };
 
   return (
@@ -147,6 +151,8 @@ const ContentComponent = ({ navigation, products, setProducts }) => {
   const { state: refreshState } = useRefreshData();
   //banner
   const [imgActive, setImgActive] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
 
@@ -175,18 +181,28 @@ const ContentComponent = ({ navigation, products, setProducts }) => {
 
   //call data
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const responseProducts = await axios.get(endpoints.products);
-        setProducts(responseProducts.data);
-      } catch (error) {
-        console.error("Error:", error);
-      } finally {
-        setTimeout(() => {
-          setIsLoadingProducts(false);
-        }, 1000);
-      }
+    fetchDataProduct();
+  }, [refreshState, currentPage]);
 
+  const fetchDataProduct = async () => {
+    setIsLoadingProducts(true);
+    try {
+      const responseProducts = await axios.get(
+        `${endpoints.products}?page=${currentPage}`
+      );
+      setProducts(responseProducts.data.results);
+      setTotalPages(responseProducts.data.count);
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setTimeout(() => {
+        setIsLoadingProducts(false);
+      }, 1000);
+    }
+  };
+
+  useEffect(() => {
+    const fetchDataCategory = async () => {
       try {
         const responseCategories = await axios.get(endpoints.categories);
         setCategorys(responseCategories.data);
@@ -199,10 +215,8 @@ const ContentComponent = ({ navigation, products, setProducts }) => {
       }
     };
 
-    fetchData();
-
-    console.log("load data");
-  }, [refreshState]);
+    fetchDataCategory();
+  }, []);
 
   //format price
   const formatPrice = (price) => {
@@ -226,6 +240,45 @@ const ContentComponent = ({ navigation, products, setProducts }) => {
     { image: require("../../images/laptop.png") },
     { image: require("../../images/badminton.png") },
   ];
+
+  //page
+  const renderPagination = () => {
+    const itemsPerPage = 6;
+    const totalPagesss = Math.ceil(totalPages / itemsPerPage);
+
+    const pages = Array.from({ length: totalPagesss }, (_, index) => index + 1);
+
+    return (
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "center",
+          marginTop: 20,
+          marginBottom: 15,
+          width: "100%",
+          // borderWidth: 1,
+          // marginLeft: 150,
+          // backgroundColor: "red",
+        }}
+      >
+        {pages.map((page) => (
+          <TouchableOpacity
+            key={page}
+            onPress={() => setCurrentPage(page)}
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              backgroundColor: currentPage === page ? "#db3918" : "#b3b3b3",
+              marginHorizontal: 5,
+              borderRadius: 5,
+            }}
+          >
+            <Text style={{ color: "white" }}>{page}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  };
 
   return (
     <ScrollView style={styles.wrap}>
@@ -366,6 +419,7 @@ const ContentComponent = ({ navigation, products, setProducts }) => {
             ) : (
               <Text>Không tìm thấy sản phẩm nào!</Text>
             )}
+            {renderPagination()}
           </View>
         )}
       </View>

@@ -101,38 +101,42 @@ const ContentComponent = ({ navigation }) => {
   //login
   const handleLogin = async () => {
     try {
-      // thông báo nhập thiếu dữ liệu 
-     if(!username  || !password)
-     {
-      Alert.alert('Thông báo:', 'Vui nhập đầy đủ thông tin!');
-     }
-      const response = await axios.post(
-        "http://10.0.2.2:8000/o/token/",
-        `grant_type=password&username=${username}&password=${password}&client_id=dMlVgp3i59e91nDEGZ0Kq6D7uLX6MKLq3RL68eoT&client_secret=hA095gEXYFSqRCnt2fN2qgzWRL7M6Xpay3Bjd8ddQLVc7LhQzH7mYibKpOrMR7soZhthIaWsKf6rxBHDWohV5ePKNIMFmQQT9gEgS3Dt3ngvlv6zftrKtwk8usb5wFLH`,
-        {
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-        }
-      );
+      if(!username || !password)
+      {
+        Alert.alert("Thông báo:", "Vui lòng nhập đầy đủ thông tin!");
+      }
+      else{
+        const response = await axios.post(
+          "http://10.0.2.2:8000/o/token/",
+          `grant_type=password&username=${username}&password=${password}&client_id=dMlVgp3i59e91nDEGZ0Kq6D7uLX6MKLq3RL68eoT&client_secret=hA095gEXYFSqRCnt2fN2qgzWRL7M6Xpay3Bjd8ddQLVc7LhQzH7mYibKpOrMR7soZhthIaWsKf6rxBHDWohV5ePKNIMFmQQT9gEgS3Dt3ngvlv6zftrKtwk8usb5wFLH`,
+          {
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+          }
+        );
 
-      const accessToken = response.data.access_token;
+        const accessToken = response.data.access_token;
 
-      axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+        axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
 
-      const userInfoResponse = await axios.get(endpoints.current_account);
+        const userInfoResponse = await axios.get(endpoints.current_account);
 
-      console.log("Thông tin người dùng:", userInfoResponse.data);
-      dispatch({
-        type: "login",
-        payload: userInfoResponse.data,
-      });
-      // console.log(accessToken);
-      await AsyncStorage.setItem("accessToken", accessToken);
+        console.log("Thông tin người dùng:", userInfoResponse.data);
+        dispatch({
+          type: "login",
+          payload: userInfoResponse.data,
+        });
+        // console.log(accessToken);
+        await AsyncStorage.setItem("accessToken", accessToken);
 
-      if (userInfoResponse.data.role == 2 || userInfoResponse.data.role == 3) {
-        navigation.navigate("HomeTabs");
-      } else navigation.navigate("MenuManager");
+        if (userInfoResponse.data.role == 2 || userInfoResponse.data.role == 3) {
+          navigation.navigate("HomeTabs");
+        } else navigation.navigate("MenuManager");
+      }
+      
+
+      
     } catch (error) {
       console.error("Đăng nhập thất bại:", error);
       console.log("Error details:", error.response.data);

@@ -70,19 +70,7 @@ const HeaderComponent = () => {
 
 const ContentComponent = ({ navigation, route }) => {
   // const route = useRoute();
-  // const [user, dispatch] = useLogin();
-  const user = {
-    address: "python",
-    avt: "https://res.cloudinary.com/diyeuzxqt/image/upload/v1705139014/sptj8owhhcsu85tmdpcd.jpg",
-    date_of_birth: "2001-02-12",
-    email: "manager@gmail.com",
-    full_name: "Manager",
-    gender: true,
-    id: 69,
-    phone: "0123456789",
-    role: 1,
-    username: "manager",
-  };
+  const [user, dispatch] = useLogin();
 
   //banner
   const [imgActive, setImgActive] = useState(0);
@@ -110,6 +98,14 @@ const ContentComponent = ({ navigation, route }) => {
 
   const scrollViewRef = useRef();
   // console.log(storeData);
+
+  //logout
+  const logout = () => {
+    dispatch({
+      type: "logout",
+    });
+    navigation.navigate("Profile");
+  };
 
   return (
     <ScrollView style={{ height: "100%" }}>
@@ -177,7 +173,7 @@ const ContentComponent = ({ navigation, route }) => {
 
       {/* <View style={styles.brContent}></View> */}
 
-      <View style={styles.brContent}></View>
+      {/* <View style={styles.brContent}></View> */}
 
       <View style={styles.bgAddName}>
         <View style={styles.bgItem1}>
@@ -277,6 +273,14 @@ const ContentComponent = ({ navigation, route }) => {
       </View>
 
       <View style={styles.brContent}></View>
+
+      {user && (
+        <>
+          <TouchableOpacity style={styles.bgButtonLogin} onPress={logout}>
+            <Text style={styles.textBtnLogin}>Đăng xuất</Text>
+          </TouchableOpacity>
+        </>
+      )}
     </ScrollView>
   );
 };
@@ -328,8 +332,8 @@ const styles = StyleSheet.create({
   },
   textSignIn: {
     fontSize: 19,
-    color: "black",
-    fontWeight: "400",
+    color: "#db3918",
+    fontWeight: "500",
   },
   brButton: {
     height: 3,
@@ -470,6 +474,7 @@ const styles = StyleSheet.create({
   bgAddName: {
     width: windownWidth - 30,
     marginLeft: 15,
+    // marginTop:20,
   },
   btnAddName: {
     flexDirection: "row",
@@ -543,5 +548,22 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
+  },
+  bgButtonLogin: {
+    height: 43,
+    borderRadius: 5,
+    width: windownWidth - 230,
+    marginLeft: 115,
+    marginTop: 270,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#EE4D2D",
+    marginBottom: 20,
+  },
+  textBtnLogin: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

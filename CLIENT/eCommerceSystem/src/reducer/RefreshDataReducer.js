@@ -6,6 +6,10 @@ export const refreshDataReducer = (state, action) => {
       return !state;
     case "REFRESH_DATA_MANAGER":
       return !state;
+    case "REFRESH_DATA_UPDATECMT":
+      return !state;
+    case "REFRESH_DATA_ADDCMT":
+      return !state;
     default:
       return state;
   }

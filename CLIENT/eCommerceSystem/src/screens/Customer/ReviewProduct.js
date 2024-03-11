@@ -3,6 +3,7 @@ import React, { useContext, useState, useEffect } from "react";
 import { Image, ScrollView, FlatList, Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRoute } from "@react-navigation/native";
+import { useRefreshData } from "../../context/RefreshDataContext";
 
 import axios, { endpoints } from "../../config/API";
 import {
@@ -43,12 +44,12 @@ const HeaderComponent = ({ navigation }) => {
     <View style={{ flex: 1 }}>
       <View style={styles.containerHeader}>
         <View style={styles.signIn}>
-          <TouchableOpacity style={styles.bgIconMess}>
+          {/* <TouchableOpacity style={styles.bgIconMess}>
             <Image
               source={require("../../images/111.png")}
               style={styles.iconBack}
             ></Image>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity>
             <Text style={styles.textSignIn}>Đánh giá sản phẩm</Text>
           </TouchableOpacity>
@@ -61,8 +62,10 @@ const HeaderComponent = ({ navigation }) => {
 
 const ContentComponent = ({ navigation }) => {
   const route = useRoute();
+  const { dispatch } = useRefreshData();
+
   const { userId, orderDetailId, imageProduct, nameProduct } = route.params;
-  const [rating, setRating] = useState("");
+  const [rating, setRating] = useState("3");
   const [content, setContent] = useState("");
 
   //   console.log(userId, orderDetailId);
@@ -71,32 +74,39 @@ const ContentComponent = ({ navigation }) => {
     setRating(rating);
   };
 
-  //   //add cmt product
+  //add cmt product
   const handleComment = async () => {
     try {
-      const formData = new FormData();
-      formData.append("account_id", userId);
-      formData.append("rating", rating);
-      formData.append("content", content);
+      if (!content || content.trim() === "") {
+        alert("Vui lòng nhập nội dung đánh giá!");
+      } else {
+        const formData = new FormData();
+        formData.append("account_id", userId);
+        formData.append("rating", rating);
+        formData.append("content", content);
 
-      const response = await axios.post(
-        `/comments/${orderDetailId}/add_comment_product/`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+        const response = await axios.post(
+          `/comments/${orderDetailId}/add_comment_product/`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
 
-      console.log(response.data);
+        // console.log(response.data);
+        dispatch({ type: "REFRESH_DATA_ADDCMT" });
 
-      Alert.alert("Thành công", "Bình luận đã được thêm.");
-      navigation.navigate("BillConfirm", { user: userId, refreshData: true });
+        Alert.alert("Thành công", "Bình luận đã được thêm.");
+
+        navigation.navigate("BillConfirm", { user: userId });
+      }
     } catch (error) {
       console.error("Lỗi khi thêm bình luận:", error);
     }
   };
+
   return (
     <View>
       <View style={{ width: windownWidth - 20, marginLeft: 10 }}>
